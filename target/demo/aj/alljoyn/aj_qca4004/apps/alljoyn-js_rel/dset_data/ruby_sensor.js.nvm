@@ -1,0 +1,127 @@
+/******************************************************************************
+* Copyright 2015, Qualcomm Connected Experiences, Inc.
+*
+******************************************************************************/
+
+/*
+ * This script is meant to be paired with the "ruby_sensor_ctrl.js" script. This
+ * script should be installed on a 1.1 HW Ruby board. After installation this 
+ * device will act as a sensor/server that can interact with the "ruby_sensor_ctrl.js" 
+ * device which will be called "control". This sensor device does the following:
+ * 
+ *  - Services the Temp method call by returning the temperature from the TMP106 I2C device
+ *  - Services the PWM method calls
+ *      * Set the frequency for any of the RGB LED's
+ *      * Set the duty cycle for any of the RGB LED's
+ *  - Writes data to UART when the "Print" signal is received
+ *  - Sends a notification when UART data is received.
+ */
+
+var AJ = require('AllJoyn');
+var IO = require('IO');
+
+/* Temperature sensor setup */
+var SDA = IO.pin[14];
+var SCL = IO.pin[15];
+var TMP106_ADDRESS = 0x48;
+var TMP106_TEMP_REG = 0x00;
+var TMP106_CONFIG_REG = 0x01;
+
+function HexToTemp(hex)
+{
+    return (50 * hex) / 0x320;
+}
+
+/* LED setup */
+var RED_LED = IO.digitalOut(IO.pin[6]);
+var GREEN_LED = IO.digitalOut(IO.pin[7]);
+var BLUE_LED = IO.digitalOut(IO.pin[8]);
+
+/* Start PWM low */
+RED_LED.pwm(0.0001, 10000);
+GREEN_LED.pwm(0.0001, 10000);
+BLUE_LED.pwm(0.0001, 10000);
+
+/* UART setup */
+var TX = IO.pin[29];
+var RX = IO.pin[28];
+var UART = IO.uart(TX, RX, 115200);
+
+var currentString = '';
+
+function uartOnRxReady(data)
+{
+    data = UART.read(16);
+    /* Write data out so it can be seen */
+    UART.write(data);
+    if ((data).toString(10) == '\r') {
+        /* Send notification once the input has received <Enter> key */
+        AJ.notification(AJ.notification.Info, currentString).send(30);
+        currentString = '';
+    } else {
+        currentString += (data).toString(10);
+    }
+}
+
+UART.setTrigger(IO.rxReady, uartOnRxReady);
+
+/*
+ * AllJoyn interface and object definitions
+ */
+AJ.interfaceDefinition["org.alljoyn.sensor"] =
+{
+    /* Property to access temperature sensor */
+    Temp:{ type:AJ.METHOD, returns:['s'] },
+    /* Set the red LED's PWM value */
+    SetRed:{ type:AJ.METHOD, args:["du"] },
+    /* Set the green LED's PWM value */
+    SetGreen:{ type:AJ.METHOD, args:["du"] },
+    /* Set the blue LED's PWM value */
+    SetBlue:{ type:AJ.METHOD, args:["du"] },
+    /* Send data out to UART */
+    Print: { type:AJ.SIGNAL, args:['s'] }
+};
+
+AJ.objectDefinition['/sensor'] = {
+    interfaces:['org.alljoyn.sensor']
+};
+
+AJ.onAttach = function()
+{
+    print("Attached to bus");
+}
+
+AJ.onDetach = function()
+{
+    print("Detached from bus");
+}
+
+AJ.onMethodCall = function(arg)
+{
+    if (this.member == 'SetRed') {
+        RED_LED.pwm(arguments[0], arguments[1]);
+        this.reply();
+    } else if (this.member == 'SetGreen') {
+        GREEN_LED.pwm(arguments[0], arguments[1]);
+        this.reply();
+    } else if (this.member == 'SetBlue') {
+        BLUE_LED.pwm(arguments[0], arguments[1]);
+        this.reply();
+    } else if (this.member == 'Temp') {
+        var TEMP_SENSOR = IO.i2cMaster(SDA, SCL, 200000);
+        /* Initialize temp sensor */
+        TEMP_SENSOR.transfer(TMP106_ADDRESS, [TMP106_CONFIG_REG, 0x78]);
+        var temp = TEMP_SENSOR.transfer(TMP106_ADDRESS, TMP106_TEMP_REG, 2);
+        var real_temp = (((temp[0] << 8) & 0xFF00) | (temp[1] & 0x00FF)) >> 4;
+        this.reply((HexToTemp(real_temp) * 1.8 + 32).toString(10));
+    } else {
+        throw('No member named ' + this.member);
+    }
+}
+
+AJ.onSignal = function()
+{
+    if (this.member == 'Print') {
+        UART.write(arguments[0]);
+    }
+}

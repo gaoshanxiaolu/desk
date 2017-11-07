@@ -1,0 +1,21 @@
+This directory may be populated with files, which will be marshalled into a
+set of Ruby DSETs and combined with an executable as part of the final
+flashable/execuatable image.  The data contained within the files is immaterial
+to the build process, but should conform to whatever format the runtime
+code needs to operate correctly. Files may be binary or ascii.
+
+Naming Convention examples:
+
+XXXXXXXX.js.nvm         -- Include file (One only) as an executable alljoyn-js script
+
+YYYYYYYY_ro_1bf4.nvm    -- Include file as a Read-Only AJ_NVRAM item with id of 0x1bf4
+
+ZZZZZZZZ_rw_01b4.nvm    -- Include file as the Factory Reset value of a Read-Writeable
+                           AJ_NVRAM item with id of 0x01b4
+
+The leading part of the file is free-form and can be named anything of any length. The
+ro vs rw part of the file name is mandatory, to indicate it is part of the Read Onky DSET
+or the Factory Reset DSET.  The 4-digit hex value is mandatory, must be four digits long,
+and should be unique amoung all other files in this directory.
+
+Files that do not follow this naming convention (such as this README file) are ignored.

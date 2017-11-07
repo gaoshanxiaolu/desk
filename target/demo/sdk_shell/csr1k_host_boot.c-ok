@@ -1,0 +1,531 @@
+/******************************************************************************
+    Copyright (C) Cambridge Silicon Radio Ltd 2011
+
+FILE
+    csr1k_host_boot.c
+
+DESCRIPTION
+    This file contains example code to boot CSR1000 or CSR1001 over the
+    debug SPI port.
+
+    This code has been developed for an NXP LPC210x processor and run on
+    an Olimex LPC-P2106-B low cost development board.
+
+    The tool chain is WINARM and used the "Programmers Notepad 2" IDE 
+    although a makefile build should be possible.
+
+DISCLAIMER
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+    
+    It is only for use with Cambridge Silicon Radio's CSR1000/1001 parts.
+    
+    It must not be disclosed to any 3rd parties without the express written
+    permission of CSR.
+
+******************************************************************************/
+
+
+#include "csr1k_host_boot.h"
+#include "swat_parse.h"
+
+/* We don't use the internal SPI block's SSEL functionality, we bit bash a 
+ * SPI Chip SelectB signal by hand.  And since we then have a choice of pin
+ * we avoid P0.7/SSEL because it's used for the LED which is nice to keep.
+ * Make an arbitrary choice of P0.11 for CSB leaving the second UART & LED
+ * pins free.  The SPI CLK is on P0.4, MISO on P0.5 and MOSI on P0.6
+ * I tried P0.3 for SPI_CSB but it didn't work, I must have missed something!
+ */
+#define GPIO_SPI_CSB                (1 << 11)  
+#define SET_SPI_CSB_AS_OUTPUT()     (GPIO0_IODIR |= GPIO_SPI_CSB)
+#define SET_SPI_CSB_0()             (GPIO0_IOCLR  = GPIO_SPI_CSB)
+#define SET_SPI_CSB_1()             (GPIO0_IOSET  = GPIO_SPI_CSB)
+
+/* This is defined by the LPC210x, we can't change it but we need a definition
+ * since we have to bit bash it by hand for "clocking in" and "clocking out"
+ * and checking when we've completed a transaction.
+ */
+#define GPIO_SPI_CLK                (1 << 4)
+#define SET_SPI_CLK_AS_OUTPUT()     (GPIO0_IODIR |= GPIO_SPI_CLK) 
+#define SET_SPI_CLK_0()             (GPIO0_IOCLR = GPIO_SPI_CLK)
+#define SET_SPI_CLK_1()             (GPIO0_IOSET = GPIO_SPI_CLK)
+
+/* We need to "borrow" the SPI clock pin for wiggling by hand */
+#define PINSEL0_SCK_MASK            0x00000300
+#define PINSEL0_SCK_SPI             0x00000100
+#define PINSEL0_SCK_PIO             0x00000000
+#define SET_SPI_CLK_AS_GPIO()       \
+    (PCB_PINSEL0 = ((PCB_PINSEL0 & ~PINSEL0_SCK_MASK) | PINSEL0_SCK_PIO))
+#define SET_SPI_CLK_FOR_SPI()       \
+    (PCB_PINSEL0 = ((PCB_PINSEL0 & ~PINSEL0_SCK_MASK) | PINSEL0_SCK_SPI))
+
+#define PINSEL0_SPI_MOSI_MISO       0x00001400
+/* These are done automatically when we set the relevant bits in PCB_PINSEL0 */
+#define SET_SPI_MOSI_AS_OUTPUT()    ((void) 0)
+#define SET_SPI_MISO_AS_INPUT()     ((void) 0)
+
+/* register bit definitions */
+#define SPI_SPSR_SPIF               (1 << 7)
+
+
+static void CSRspiTXword(uint16 addr, uint16 tx_data16);
+static void CSRspiTXblock(uint16 addr, uint16 *ptx_data16, uint16 length);
+static void spiStartTransaction(uint8 r_or_w, uint16 addr);
+static void spiClock2Cyles(void);
+static void spiStopTransaction(void);
+static void spiTXword(uint16 tx_data16);
+static void spiTXbyte(uint8 tx_data8);
+
+
+/*--------------------------------------------------------------------------*/
+/* CSR SPI LPC210x initialisation code lives here                           */
+/*--------------------------------------------------------------------------*/
+
+/* Note:  This code is specific to the QCA4010 and CSR1000 interface to it */
+void CSRinitQCA4010Peripherals(void)
+{
+    SWAT_PTF("CSRinitQCA4010Peripherals: TBD \n");
+    qcom_spi_init(SPI_CS_1, SPI_MOSI_1, SPI_MISO_1, SPI_SCLK_1, SPI_FREQ_100K);
+#if 0
+    /* these idle high, set before anything gets enabled to minimise any edges */
+    SET_SPI_CSB_1();
+    SET_SPI_CLK_1();
+
+    /* Initialise the SPI pins and hardware */
+    SET_SPI_CSB_AS_OUTPUT();
+    SET_SPI_CLK_AS_OUTPUT();
+    SET_SPI_MOSI_AS_OUTPUT();
+    SET_SPI_MISO_AS_INPUT();
+    
+    SET_SPI_CLK_AS_GPIO();
+
+    /* At the start dedicate MOSI & MISO pins to the control of the SPI block.
+     * The CSB we do entirely by hand and the CLK signal a mixture of by hand
+     * and also direct hardware control but the LPC's SPI h/w.
+     */ 
+    PCB_PINSEL0 |= PINSEL0_SPI_MOSI_MISO;
+    SPI_SPCCR   = 60;       /* set the SPI speed at ~1MHz. MUST be even! */
+    SPI_SPCR    = 0x38;     /* device selected as master. CPOL,CPHA = 1  */
+#endif
+} 
+
+
+/*--------------------------------------------------------------------------*/
+/* CSR1000/1001 boot code is here  lives here                               */
+/*--------------------------------------------------------------------------*/
+
+/* Include auto generated header file of constants, approx 50 kb as 25 kw   */
+#define UWORD16 uint16
+#include "xap_code.h"
+#include "qcom/qcom_gpio.h"
+
+#define CS_PIN	0
+#define MOSI_PIN	1
+#define MISO_PIN	4
+#define CLK_PIN		5
+
+#define SPI_CLK_DELAY_TIME 2
+
+#define SPI_CLK_WAIT	my_delay(SPI_CLK_DELAY_TIME)
+
+void my_delay(int time)
+{
+	while(time--)
+		;
+}
+
+void gpio_spi_init(void)
+{
+	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(CS_PIN), 0);
+	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(MISO_PIN), 0);
+	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(MOSI_PIN), 0);
+	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(CLK_PIN), 0);
+
+	qcom_gpio_pin_dir(MOSI_PIN, 0);
+	qcom_gpio_pin_dir(MISO_PIN, 1);
+	qcom_gpio_pin_dir(CLK_PIN, 0);
+	qcom_gpio_pin_dir(CS_PIN, 0);
+
+	qcom_gpio_pin_set(CS_PIN, 1);
+	qcom_gpio_pin_set(CLK_PIN, 1);
+	qcom_gpio_pin_set(MOSI_PIN, 1);
+
+}
+
+void gpio_spi_cs(int level)
+{
+	qcom_gpio_pin_set(CS_PIN, level);
+}
+
+void CSR1Ktestgpio(void);
+
+void gpio_spi_tx_byte(uint8 tx_data8)
+{
+//CSR1Ktestgpio();
+
+	int i = 0;
+
+//	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(CLK_PIN), 0);
+//	qcom_gpio_pin_dir(CLK_PIN, 0);
+
+	for(i=7;i>=0;i--){
+		//SWAT_PTF("set clk 0\n");
+		qcom_gpio_pin_set(CLK_PIN, 0);
+		SPI_CLK_WAIT;
+		qcom_gpio_pin_set(MOSI_PIN, 0x01&(tx_data8>>i));
+		SPI_CLK_WAIT;
+		//SWAT_PTF("set clk 1\n");
+		qcom_gpio_pin_set(CLK_PIN, 1);
+		SPI_CLK_WAIT;
+		SPI_CLK_WAIT;
+	}
+
+	qcom_gpio_pin_set(CLK_PIN, 0);
+	SPI_CLK_WAIT;
+	
+}
+
+void CSR1Ktestgpio(void)
+{
+
+	gpio_spi_init();
+
+#if 0
+//	int ret = -1;
+	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(CLK_PIN), 0);
+	qcom_gpio_pin_dir(CLK_PIN, 0);
+	qcom_gpio_pin_set(CLK_PIN, 0);
+
+//	ret = qcom_gpio_pin_get(CLK_PIN);
+//	SWAT_PTF("current ret is %d\n", ret);
+	
+	SPI_CLK_WAIT;
+//	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(CLK_PIN), 0);
+//	qcom_gpio_pin_dir(CLK_PIN, 0);
+	qcom_gpio_pin_set(CLK_PIN, 1);
+
+//	ret = qcom_gpio_pin_get(CLK_PIN);
+//	SWAT_PTF("current ret is %d\n", ret);
+	
+	SPI_CLK_WAIT;
+//	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(CLK_PIN), 0);
+//	qcom_gpio_pin_dir(CLK_PIN, 0);
+	qcom_gpio_pin_set(CLK_PIN, 0);
+	SPI_CLK_WAIT;
+//	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(CLK_PIN), 0);
+//	qcom_gpio_pin_dir(CLK_PIN, 0);
+	qcom_gpio_pin_set(CLK_PIN, 1);
+	SPI_CLK_WAIT;
+//	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(CLK_PIN), 0);
+//	qcom_gpio_pin_dir(CLK_PIN, 0);
+	qcom_gpio_pin_set(CLK_PIN, 0);
+	SPI_CLK_WAIT;
+//	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(CLK_PIN), 0);
+//	qcom_gpio_pin_dir(CLK_PIN, 0);
+	qcom_gpio_pin_set(CLK_PIN, 1);
+	SPI_CLK_WAIT;
+//	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(CLK_PIN), 0);
+//	qcom_gpio_pin_dir(CLK_PIN, 0);
+	qcom_gpio_pin_set(CLK_PIN, 0);
+	SPI_CLK_WAIT;
+//	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(CLK_PIN), 0);
+//	qcom_gpio_pin_dir(CLK_PIN, 0);
+	qcom_gpio_pin_set(CLK_PIN, 1);
+	SPI_CLK_WAIT;
+
+#if 0
+	gpio_spi_init();
+
+	
+	CSRspiTXword(0xF82F, 1);
+	timeDelayInMS(15);
+	CSRspiTXword(0xF81D, 2);
+
+	/* Set PC to zero */
+    CSRspiTXword(0xFFEA, 0);
+    CSRspiTXword(0xFFE9, 0);
+
+    /* And GO (which is really an "un-stop" :) */
+    CSRspiTXword(0xF81D, 0);
+#endif
+
+#endif
+}
+
+void CSR1Kreboot(void)
+{
+#if 1
+	//gpio_spi_init();
+
+	//qcom_spi_init(SPI_CS_1, SPI_MOSI_1, SPI_MISO_1, SPI_SCLK_1, SPI_FREQ_100K);
+	SWAT_PTF("+\n");
+	CSRspiTXword(0xF82F, 1);
+	SWAT_PTF("wait 15ms\n");
+	timeDelayInMS(15);
+	CSRspiTXword(0xF81D, 2);
+
+	/* Set PC to zero */
+    CSRspiTXword(0xFFEA, 0);
+    CSRspiTXword(0xFFE9, 0);
+
+    /* And GO (which is really an "un-stop" :) */
+    CSRspiTXword(0xF81D, 0);
+#endif
+}
+void CSR1Kboot(void)
+{
+    uint16 i;
+    uint16 addr;
+    uint16 len;
+    uint16 *pbuf;
+
+	//gpio_spi_init(); //need "testgpio" to init it.
+
+    /* Reset the chip.  No need to clear this later, it is self clearing */
+    CSRspiTXword(0xF82F, 1);
+
+    /* wait for the interal boot hardware in CSR1000 to give up trying to find
+     * an image in external EEPROM or SPI Flash to download (that takes ~11ms).
+     * While the chip is checking for memory we can't boot the chip over SPI.
+     */
+    timeDelayInMS(15);
+
+    /* STOP the processor */
+    CSRspiTXword(0xF81D, 2);
+
+    /* download each section as a block transfer till we're done.
+     * the xap code structure is produced by the "xuv_to_h" utility
+     */
+    for (i = 0; i < XAP_CODE_STRUCT_SIZE; i += len)
+    {
+        addr = xap_code_struct[i++];
+        len  = xap_code_struct[i++];
+        pbuf = (uint16 *) &xap_code_struct[i];
+
+	//SWAT_PTF("tx block, len %d\n", len);
+        CSRspiTXblock(addr, pbuf, len);
+    }
+
+    /* Magic toggle */
+    CSRspiTXword(0x0018, 1);
+    CSRspiTXword(0x0018, 0);
+
+    /* Set PC to zero */
+    CSRspiTXword(0xFFEA, 0);
+    CSRspiTXword(0xFFE9, 0);
+
+    /* And GO (which is really an "un-stop" :) */
+    CSRspiTXword(0xF81D, 0);
+}
+
+
+/*--------------------------------------------------------------------------*/
+/* Basic CSR SPI primitives live here                                       */
+/*--------------------------------------------------------------------------*/
+
+/* CSR SPI write command.  Completely proprietary */
+#define CSR_SPI_CMD_WRITE           0x02
+
+static void CSRspiTXword(uint16 addr, uint16 tx_data16)
+{/*
+    unsigned char req[5];
+
+	req[0] = CSR_SPI_CMD_WRITE;
+	req[1] = (uint8)(0xff & (addr >> 8));
+	req[2] = (uint8)(0xff & (addr));
+	req[3] = (uint8)(0xff & (tx_data16 >> 8));
+	req[4] = (uint8)(0xff & (tx_data16));
+
+	qcom_spi_request((unsigned int *)req, 0, 5);
+*/
+/*
+	gpio_spi_cs(1);
+	SPI_CLK_WAIT;
+	SPI_CLK_WAIT;
+	gpio_spi_cs(0);
+	gpio_spi_tx_byte(CSR_SPI_CMD_WRITE);
+	gpio_spi_tx_byte((uint8)(0xff & (addr >> 8)));
+	gpio_spi_tx_byte((uint8)(0xff & (addr)));
+	gpio_spi_tx_byte((uint8)(0xff & (tx_data16 >> 8)));
+	gpio_spi_tx_byte((uint8)(0xff & (tx_data16)));
+	gpio_spi_cs(1);
+	SPI_CLK_WAIT;
+	SPI_CLK_WAIT;
+*/
+    spiStartTransaction(CSR_SPI_CMD_WRITE, addr);
+
+    spiTXword(tx_data16);
+
+    spiStopTransaction();
+}
+
+static void CSRspiTXblock(uint16 addr, uint16 *ptx_data16, uint16 length)
+{
+/*
+    unsigned char *req;
+    int i = 0;
+
+    req = qcom_mem_alloc(2*length+16);
+
+    req[i++] = CSR_SPI_CMD_WRITE;
+    req[i++] = (uint8)(0xff & (addr >> 8));
+    req[i++] = (uint8)(0xff & (addr));
+
+    while (length--)
+    {
+        //spiTXword(*ptx_data16++);
+        req[i++] = (uint8)(0xff & (*ptx_data16 >> 8));
+        req[i++] = (uint8)(0xff & (*ptx_data16++));
+    }
+    SWAT_PTF("in tx block, len %d\n", i);
+    qcom_spi_request((unsigned int *)req, 0, i);
+
+    qcom_mem_free(req);
+    */
+	
+    spiStartTransaction(CSR_SPI_CMD_WRITE, addr);
+
+    while (length--)
+    {
+        spiTXword(*ptx_data16++);
+    }
+
+    spiStopTransaction();
+    
+}
+
+    
+/*--------------------------------------------------------------------------*/
+/* CSR SPI helper functions live here                                       */
+/*--------------------------------------------------------------------------*/
+
+static void spiStartTransaction(uint8 r_or_w, uint16 addr)
+{
+    /* Note:  It is assummed that CSB is already high */
+
+   // spiClock2Cyles();       /* so called "clocking in" */
+
+    //timeDelayInUS(2);
+
+    //SET_SPI_CSB_0();
+
+    //timeDelayInUS(2);
+    
+    //spiTXbyte(r_or_w);
+
+    //spiTXword(addr);
+    
+
+    gpio_spi_cs(1);
+    spiClock2Cyles();       /* so called "clocking in" */
+    SPI_CLK_WAIT;
+    gpio_spi_cs(0);
+    SPI_CLK_WAIT;
+
+    spiTXbyte(r_or_w);
+
+    spiTXword(addr);
+
+/*
+    gpio_spi_tx_byte(r_or_w);
+    gpio_spi_tx_byte((uint8)(0xff & (addr >> 8)));
+    gpio_spi_tx_byte((uint8)(0xff &addr));
+   */
+	
+}
+#if 1
+static void spiClock2Cyles(void)
+{
+#if 0
+       qcom_gpio_pin_set(CLK_PIN, 0);
+	//qcom_gpio_pin_set(CLK_PIN, 0);
+	//qcom_gpio_pin_set(CLK_PIN, 0);
+SPI_CLK_WAIT;
+	qcom_gpio_pin_set(CLK_PIN, 1);
+	//qcom_gpio_pin_set(CLK_PIN, 1);
+	//qcom_gpio_pin_set(CLK_PIN, 1);
+SPI_CLK_WAIT;
+	qcom_gpio_pin_set(CLK_PIN, 0);
+	//qcom_gpio_pin_set(CLK_PIN, 0);
+	//qcom_gpio_pin_set(CLK_PIN, 0);
+SPI_CLK_WAIT;
+	qcom_gpio_pin_set(CLK_PIN, 1);
+	//qcom_gpio_pin_set(CLK_PIN, 1);
+	//qcom_gpio_pin_set(CLK_PIN, 1);
+
+
+    SET_SPI_CLK_AS_GPIO();
+
+    /* We repeat these to get the "clock" frequency correct - 1MHz */
+    SET_SPI_CLK_0();
+    SET_SPI_CLK_0();
+    SET_SPI_CLK_0();
+
+    SET_SPI_CLK_1();
+    SET_SPI_CLK_1();
+    SET_SPI_CLK_1();
+
+    SET_SPI_CLK_0();
+    SET_SPI_CLK_0();
+    SET_SPI_CLK_0();
+
+    SET_SPI_CLK_1();
+    SET_SPI_CLK_1();
+    SET_SPI_CLK_1();
+
+    SET_SPI_CLK_FOR_SPI();
+#endif
+}
+#endif
+
+static void spiStopTransaction(void)
+{
+	SPI_CLK_WAIT;
+	gpio_spi_cs(1);
+	SPI_CLK_WAIT;
+	qcom_gpio_pin_set(CLK_PIN, 1);
+
+	spiClock2Cyles();   /* so called "clocking out */
+#if 0
+    timeDelayInUS(2);
+
+    SET_SPI_CSB_1();    /* VITAL - end of "official" SPI transaction */
+
+    timeDelayInUS(2);
+
+    spiClock2Cyles();   /* so called "clocking out */
+
+    timeDelayInUS(2);
+#endif
+}
+
+/* the LPC210x doesn't support 16 bit SPI so do two 8 bit ones back to back */
+static void spiTXword(uint16 tx_data16)
+{
+    //unsigned int tx_data = (unsigned int)tx_data16;
+    spiTXbyte((uint8)(0xff & (tx_data16 >> 8)));
+    spiTXbyte((uint8)(0xff &  tx_data16));
+    //qcom_spi_request(&tx_data, 0, 2);
+}
+
+/* Lowest level SPI primitive. All the TX bits go through this function */
+static void spiTXbyte(uint8 tx_data8)
+{
+#if 0
+    SPI_SPDR = tx_data8;
+    
+    /* wait for TX byte to go.  NOTE:  checking for space before we transmit
+     * didn't work well [and didn't speed anything up] so we write first and
+     * then wait for it to be sent before returning.
+     */
+    while (!(SPI_SPSR & SPI_SPSR_SPIF))
+    {
+    }
+#endif
+	//unsigned int tx_data = (unsigned int)tx_data8;
+	//qcom_spi_request(&tx_data, 0, 1);
+	gpio_spi_tx_byte(tx_data8);
+}
+
+/* csr1k_host_boot.c */

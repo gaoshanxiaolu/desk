@@ -1,0 +1,94 @@
+
+           How to develope a loadable module for Ruby
+
+
+########################################################################
+# Developing                                                          #
+########################################################################
+1. Take the sources of "hello" module as a template, copy and rename the
+fold "hello" to any place we want
+2. Add/edit module sources
+
+
+########################################################################
+# Compiling  - QCA Internal                                            #
+########################################################################
+1. Make sure the module fold will be built recursively by parent Makefile
+2. Change the definition of "GEN_MODULES" for module name in Makefile
+3. Build all
+
+
+########################################################################
+# Compiling  - SDK                                                     #
+########################################################################
+1. Enter the module directory
+2. Make
+3. Execute script to generate flash image
+   >cd SDK_DIR
+   >./demo/sdk_flash/make_modules.sh image/iot_demo.out
+   while image/iot_demo.out is the RAM iage
+
+After compiling, we will get following ELF images in module directory:
+  *.mout             ELF images linked with ROM symbols
+  *.mout.abs         ELF images linked with ROM and RAM symbols(for debug)
+  *.mout.stripped    ELF images with debugging symbols stripped(for flash)
+
+And flash images in binary directory:
+  ota_image_AR401X_REV6_IOT_iot_demo.mbin
+  raw_flashimage_AR401X_REV6_IOT_hostless_ap+sta_mcc_singleband_module_4bitflash.mbin
+
+
+########################################################################
+# Flashing                                                             #
+########################################################################
+1. Setup HTTP(or FTP) server, and copy OTA image to server
+2. Connect Ruby to the network through WiFi
+3. Use OTA commands to write the image to flash
+   HTTP:
+   >wmiconfig --ota_http 192.168.1.147 80 ota_image_name_xxx.mbin 9 1
+
+   Or FTP:
+   >wmiconfig --ota_ftp 192.168.1.147 21 name password ota_image_name_xxx.mbin 9 1
+
+   Here flag 9 means 0x8(module, not bootable) | 0x1(firmware upgrade).
+   And partition number is 1, it could be ANY partiton except partition 0.
+
+
+########################################################################
+# Loading/unloading                                                    #
+########################################################################
+1. Install module with shell command
+   >insmod 1 hello
+   where 1 means partition 1
+
+2. Unload modle with shell command
+   >rmmod hello
+
+
+########################################################################
+# Debugging                                                            #
+########################################################################
+1. Set break point to the function
+  int init_module(struct module *mod)
+  or
+  void exit_module(struct module *mod)
+
+2. Get Text loading address by gdb command
+   p mod->text_start
+
+3. Load symbols from ELF file
+   >add-symbol-file xxx/hello.mout.abs 0xa8fd68
+   where the addresss is the text_start
+
+4. We can now set break points in modules and execute module code with Next/Step
+
+Note: we did not specify data section, so we can't show module global data
+correctly. Maybe we can add all symbol information once we get all section start 
+address with:
+   >add-symbol-file xxx/hello.mout.abs 0xa8fd68 -s .data 0x00000x -s .lit4 0x00000x
+   -s .bss 0x00000x -s .rodata 0x00000x
+
+
+
+
+

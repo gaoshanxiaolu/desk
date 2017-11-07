@@ -1,0 +1,15 @@
+DeviceName 1002 {"en":"AllJoyn"}
+#DefaultLanguage 1003 "en"
+#Passcode 1004 "000000"
+#AppName 1007 "AllJoyn.js"
+#Description 1008 {"en":"AllJoyn.js"}
+#Manufacturer 1009 {"en":"AllSeen Alliance"}
+#ModelNumber 100a "0.0.1"
+#DateOfManufacture 100b "2015-7-24"
+#SoftwareVersion 100c "0.0.1"
+#AJSoftwareVersion 100d "15.04"
+#HardwareVersion 1010 "0.0.1"
+#SupportUrl 1011 {"en":"www.allseenalliance.org"}
+# Application properties
+# These can be loaded in JS using AJ.load(<prop>);
+#AppProperties 8020 {"FirstProp":"My First Prop", "IntProp":42}
