@@ -151,6 +151,7 @@ void CSR1Kboot(void)
         pbuf = (uint16 *) &xap_code_struct[i];
 
         CSRspiTXblock(addr, pbuf, len);
+		printf("addr=%x,len=%d\n",addr,len);
     }
 
     /* Magic toggle */

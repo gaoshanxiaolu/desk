@@ -2404,7 +2404,8 @@ void swat_ssl_test_threads_stop()
 }
 
 #endif
-
+int down_firmware_ok;
+int down_firmware_len;
 A_INT32 swat_ota_upgrade(A_UINT8 device_id,A_INT32 argc, char* argv[])
 {
     A_UINT32 addr;
@@ -2454,14 +2455,20 @@ A_INT32 swat_ota_upgrade(A_UINT8 device_id,A_INT32 argc, char* argv[])
         return A_ERROR;
     }
 
+	length = 0;
     qcom_ota_upgrade(device_id,addr,filename,mode,preserve_last,protocol,&resp_code,&length);
 
     if(resp_code!=A_OK){
        SWAT_PTF("OTA Download Failed, ERR=%d",resp_code);
+	   down_firmware_ok = -1;
        return A_ERROR;
    }else{
        SWAT_PTF("OTA Download Successful Image Size:%d\n ",length);
+	   down_firmware_len = length;
+	   down_firmware_ok = 1;
    }
+
+   return length;
 
 
 }

@@ -45,7 +45,9 @@ DEFINES := \
 	-DDIVERSITY_ENABLE \
 	-DSWAT_COAP\
 	-DENABLE_MODULE \
-	-DSWAT_QURT
+	-DSWAT_QURT \
+	-DENABLE_AIRKISS \
+	-DBLE_UART
 
 ifeq ($(AR6002_REV7_VER), 5) # {
 DEFINES += -DNUM_OF_VDEVS=2 \
@@ -122,7 +124,8 @@ LIBS_COMMON := $(LIBDIR)/libiot_demo.a \
 	$(LIBDIR)/lib_mqtt_platform.a \
 	$(LIBDIR)/lib_mqtt_wrap.a \
 	$(LIBDIR)/libmodule.a \
-	$(LIBDIR)/libqurt.a
+	$(LIBDIR)/libqurt.a \
+	$(LIBDIR)/libairkiss_log.a
 
 LIBS := $(LIBS_COMMON) \
 	$(LIBDIR)/libstackghost_stub.a

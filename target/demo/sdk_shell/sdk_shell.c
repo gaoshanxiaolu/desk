@@ -12,6 +12,14 @@
 #include "qcom_wps.h"
 #include "qcom_gpio.h"
 #include "qcom_gpio_interrupts.h"
+#include "ad_key.h"
+#include "ble_uart.h"
+#include "wx_heart_package.h"
+#include "i2c_test.h"
+#include "watch_dog_task.h"
+#include "upgrade_task.h"
+#include "chair_recv_uart_task.h"
+#include "wx_airkiss.h"
 
 //#include "os/misc_api.h"
 
@@ -93,7 +101,6 @@ shell_host_entry(ULONG which_thread)
 
     console_reg_cmds(cust_cmds, cust_cmds_num);
 
-
     //A_PRINTF("cli started ---------------\n");
 
     /* Enable WPS and register event handler */
@@ -103,6 +110,25 @@ shell_host_entry(ULONG which_thread)
     #if defined(AR6002_REV74)
     qcom_wps_register_event_handler(qcom_wps_event_process_cb, NULL);
     #endif
+		ioe_wifi_config_get();
+		ad_key_app();
+		//conwifi(1,NULL);
+#if defined(BLE_UART)
+		start_smart_chair_socket_tx_app(1,NULL);
+		start_smart_chair_gw_uart_app(1,NULL);
+		start_desk_motor_app(1,NULL);
+		start_desk_uart_app(1,NULL);
+        start_desk_MorX_signel_app(1,NULL);
+        start_desk_led_disp_app(1,NULL);
+        start_desk_socket_app(1,NULL);
+		//start_desk_light_and_inir_app(1,NULL);
+		start_dht12_app(1,NULL);
+		start_watch_dog_task(1,NULL);
+		start_upgrade_task(1,NULL);
+		start_upgrade_ble_task(1,NULL);
+		printf(">>>>>>>>desk version v%d.%d<<<<<<<<<<<<\r\n",SMART_DESK_MAIN_V,SMART_DESK_SECOND_V);
+#endif
+
     /* Add all the alternate configurations for each GPIO pin */
     //shell_add_gpio_configurations();
     

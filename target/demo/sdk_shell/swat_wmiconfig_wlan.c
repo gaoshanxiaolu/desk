@@ -7,6 +7,7 @@
 #include "qcom_common.h"
 #include "swat_wmiconfig_common.h"
 #include "qcom_event.h"
+#include "ble_uart.h"
 
 /* WLAN API */
 void
@@ -240,6 +241,57 @@ void wifi_conn_callback(A_UINT8 device_id, int value)
   A_PRINTF("\nshell> ");
 }
 #endif
+#if 1
+extern A_UINT8 conn_route_flag;
+void wifi_conn_callback(A_UINT8 device_id, int value)
+{
+  QCOM_BSS_SCAN_INFO *bss_info = NULL;
+  A_UINT8 bssid[6];
+
+  //conn_route_flag = 0;
+  if (value == 10)
+  {
+    A_PRINTF("[CB]disconnected - INVALID_PROFILE \n");
+    value = 0;
+  }
+
+  if (value)
+  {
+    A_PRINTF("Connected to %s, ", gDeviceContextPtr[device_id]->ssid);
+    bss_info = qcom_get_bss_entry_by_ssid(device_id, (char *)gDeviceContextPtr[device_id]->ssid);
+    if (NULL == bss_info)
+    {
+	  A_PRINTF("NULL == bss_info\r\n ");
+      A_PRINTF("\nshell> ");
+      return;
+    }
+    A_MEMCPY(bssid, bss_info->bssid, 6);
+    A_PRINTF("bssid = %02x-%02x-%02x-%02x-%02x-%02x, ", bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
+    A_PRINTF("channel = %d, rssi = %d\n", bss_info->channel, bss_info->rssi);
+	if(value == 16)
+	{
+		conn_route_flag = 1;
+		A_PRINTF("connect route success !!!,value = %d\r\n",value);
+		set_led_state(LED_ON);
+	//qcom_sta_reconnect_stop();
+	}
+  }
+  else
+  {
+    A_PRINTF("Disconnected from %s\n", gDeviceContextPtr[device_id]->ssid);
+
+    bss_info = qcom_get_bss_entry_by_ssid(device_id, (char *)gDeviceContextPtr[device_id]->ssid);
+    if (NULL == bss_info)
+    {
+      A_PRINTF("\nshell> ");
+      return;
+    }
+    A_PRINTF("channel = %d, rssi = %d\n", bss_info->channel, bss_info->rssi);
+	//set_led_state(LED_SLOW_BLINK);
+  }
+  A_PRINTF("\nshell> ");
+}
+#endif
 
 void
 swat_wmiconfig_connect_ssid(A_UINT8 device_id, A_CHAR * ssid)
@@ -247,7 +299,11 @@ swat_wmiconfig_connect_ssid(A_UINT8 device_id, A_CHAR * ssid)
     A_UINT32 devMode;
 	
     /*Set callback*/
-    qcom_set_connect_callback(device_id, QCOM_EVENT_API_FN(_my_wifi_conn_callback));
+#if 0
+		qcom_set_connect_callback(device_id, QCOM_EVENT_API_FN(_my_wifi_conn_callback));
+#else
+		qcom_set_connect_callback(device_id, wifi_conn_callback);
+#endif
 
     qcom_op_get_mode(device_id, &devMode);
     if (QCOM_WLAN_DEV_MODE_AP != devMode) {

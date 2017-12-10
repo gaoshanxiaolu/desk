@@ -37,4 +37,20 @@
 #define AP_CLIENT_NUM_MAX        4
 #define AP_DEFAULT_CHANNEL      2412
 
+#define SMART_DESK_MAIN_V 2
+#define SMART_DESK_SECOND_V 7
+#define HEHEDNS "dev.hehedesk.com"
+
+#define BLE_NODE_MAIN_V 1
+#define BLE_NODE_SECOND_V 1
+
+#define BLE_GW_MAIN_V 1
+#define BLE_GW_SECOND_V 1
+
+enum DEV_TYPE
+{
+	UNDEF = 0,
+	C_NODE,
+	C_GW
+};
 #endif

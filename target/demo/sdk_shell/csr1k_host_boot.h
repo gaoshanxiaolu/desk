@@ -26,6 +26,7 @@ typedef char                        int8;
 #define timeDelayInMS(_d)      qcom_thread_msleep(_d)  
 
 extern void CSR1Kboot(void);
+void NODE_CSR1Kboot(void);
 
 #endif  /* CSR1K_HOST_BOOT_H */
 

@@ -1,0 +1,29 @@
+---- tx_mutex_create Matches (7 in 5 files) ----
+BTPSKRNL.c (target\...\btpskrnl):163
+      if(tx_mutex_create((TX_MUTEX *)ret_val, "BT Mutex", TX_INHERIT) == TX_SUCCESS)
+      {
+         /* If the Mutex needs to created owned, try to take it now.    */
+Dual_uart_demo.c (target\...\dual_uart_demo):19
+#define TSK_SEM_INIT tx_mutex_create(&mutex_tsk, "mutex tsk", TX_NO_INHERIT);
+#define TSK_SEM_LOCK {int status =  tx_mutex_get(&mutex_tsk, TX_WAIT_FOREVER); \
+  if (status != TX_SUCCESS) {\
+Swat_task_manage.c (target\...\sdk_shell):34
+#define TSK_SEM_INIT tx_mutex_create(&mutex_tsk, "mutex tsk", TX_NO_INHERIT);
+#define TSK_SEM_LOCK {int status =  tx_mutex_get(&mutex_tsk, TX_WAIT_FOREVER); \
+  if (status != TX_SUCCESS) {\
+Tx_api.h (target\include\threadx):974
+#define tx_mutex_create                             _tx_mutex_create
+#define tx_mutex_delete                             _tx_mutex_delete
+#define tx_mutex_get                                _tx_mutex_get
+Tx_api.h (target\include\threadx):1098
+#define tx_mutex_create(m,n,i)                      _txr_mutex_create(m,n,i,sizeof(TX_MUTEX))
+#define tx_mutex_delete                             _txr_mutex_delete
+#define tx_mutex_get                                _txr_mutex_get
+Tx_api.h (target\include\threadx):1210
+#define tx_mutex_create(m,n,i)                      _txe_mutex_create(m,n,i,sizeof(TX_MUTEX))
+#define tx_mutex_delete                             _txe_mutex_delete
+#define tx_mutex_get                                _txe_mutex_get
+Uart_at_task.c (target\demo\uart_at):30
+#define TSK_SEM_INIT tx_mutex_create(&mutex_tsk, "mutex tsk", TX_NO_INHERIT);
+#define TSK_SEM_LOCK {int status =  tx_mutex_get(&mutex_tsk, TX_WAIT_FOREVER); \
+  if (status != TX_SUCCESS) {\
