@@ -197,9 +197,9 @@ console_cmd_t cust_cmds[] = {
 	.description = (A_UCHAR *) "boot csr1010 through spi",	   
 	.execute = cmd_csr1010_hostboot},
 
-{.name = (A_UCHAR *) "scs", 	
+/*{.name = (A_UCHAR *) "scs", 	
 	.description = (A_UCHAR *) "send light on off",	   
-	.execute = cmd_update_chair_status},
+	.execute = cmd_update_chair_status},*/
 
 };
 

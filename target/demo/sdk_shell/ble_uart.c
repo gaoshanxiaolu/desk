@@ -208,7 +208,7 @@ void   desk_uart_task()
 									static A_UINT16 cnt = 100;
 									cnt++;
 
-									if(cnt > 100)
+									if(cnt > 10)
 									{
 										printf("desk pos =%d\r\n",desk_pos_value);
 										cnt = 0;
@@ -240,7 +240,7 @@ void   desk_uart_task()
 						}
 						else
 						{
-							printf("desk pos failed\r\n");
+							//printf("desk pos failed\r\n");
 						}
 
 						//memcpy(uartBuf2,&(uartBuf2[k]),buf_len - k);
@@ -265,8 +265,11 @@ enum DESK_RUN_STATE get_desk_run_state(void)
 	return desk_run_state;
 }
 
+int desk_is_moved = 0;
+
 void up_desk(void)
 {
+	desk_is_moved = 1;
 #ifdef CONTROL_LOGIC_LEVEL
 		qcom_gpio_pin_set(pin_m1,!TRUE);
 		qcom_gpio_pin_set(pin_m2,!FALSE);
@@ -293,6 +296,7 @@ void up_desk(void)
 }
 void down_desk(void)
 {
+	desk_is_moved = 1;
 #ifdef CONTROL_LOGIC_LEVEL
 		qcom_gpio_pin_set(pin_m1,!FALSE);
 		qcom_gpio_pin_set(pin_m2,!TRUE);
@@ -367,6 +371,8 @@ laptop_state = 0;
 
 void stop_desk(void)
 {
+	desk_is_moved = 0;
+	
 	#ifdef CONTROL_LOGIC_LEVEL
 	qcom_gpio_pin_set(pin_m1,TRUE);
 	qcom_gpio_pin_set(pin_m2,TRUE);	

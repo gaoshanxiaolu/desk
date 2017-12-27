@@ -87,7 +87,7 @@ A_INT32 uda1380_write(A_UINT8 addr, A_UINT16 val)
 	return ret;
 }
 //#endif
-
+#error "i2c version error"
  int cmd_i2c_test(int argc, char *argv[])
  {
        int i=0, addr,ret;
@@ -188,7 +188,10 @@ A_INT32 uda1380_write(A_UINT8 addr, A_UINT16 val)
 #include "qcom_common.h"
 //#include <qcom_i2c.h>
 #include <qcom_i2c_master.h>
-#include "myiic.h"
+//#include "myiic.h"
+#include "swat_parse.h"
+#include "qcom_time.h"
+#include "qcom_gpio.h"
 
 extern int qcom_task_start(void (*fn) (unsigned int), unsigned int arg, int stk_size, int tk_ms);
 extern void qcom_task_exit();
@@ -202,6 +205,175 @@ extern void qcom_task_exit();
 #define ADPS9300GRD_SLAVE_ADDR 0X52
 #define ADPS9300FLOAT_SLAVE_ADDR 0X72
 #define ADPS9300VCC_SLAVE_ADDR 0X92
+
+//for bxue test I2C on GPIO14/15
+#define SDA	14
+
+
+#define u8 uint8_t
+#define u16 uint16_t
+#define u32 uint32_t
+int Temprature,Humi;//定义温湿度变量 ，此变量为全局变量
+u8 Sensor_AnswerFlag=0;//定义传感器响应标志
+u8 Sensor_ErrorFlag;  //定义读取传感器错误标志
+
+void DHT12_Init(void)
+{					     
+
+	qcom_gpio_apply_peripheral_configuration(QCOM_PERIPHERAL_ID_GPIOn(SDA), 0);
+	   
+	qcom_gpio_pin_dir(SDA, 0);
+
+}
+
+#define READ_SDA qcom_gpio_pin_get(SDA)
+
+/********************************************\
+|* 功能： 读传感器发送的单个字节	        *|
+\********************************************/
+u8 DHT12_Rdata(void)
+{
+	u8 i;
+	u16 j;
+	u8 data=0,bit=0;
+	
+	for(i=0;i<8;i++)
+	{
+		while(!READ_SDA)//检测上次低电平是否结束
+		{
+			if(++j>=50000) //防止进入死循环
+			{
+				break;
+			}
+		}
+		//延时Min=26us Max70us 跳过数据"0" 的高电平		 
+		us_delay(30);
+
+		//判断传感器发送数据位
+		bit=0;
+		if(READ_SDA)
+		{
+			bit=1;
+		}
+		j=0;
+		while(READ_SDA)	//等待高电平结束
+		{
+			if(++j>=50000) //防止进入死循环
+			{
+				break;
+			}		
+		}
+		data<<=1;
+		data|=bit;
+	}
+	return data;
+}
+
+
+/********************************************\
+|* 功能：DHT12读取温湿度函数       *|
+\********************************************/
+//变量：Humi_H：湿度高位；Humi_L：湿度低位；Temp_H：温度高位；Temp_L：温度低位；Temp_CAL：校验位
+//数据格式为：湿度高位（湿度整数）+湿度低位（湿度小数）+温度高位（温度整数）+温度低位（温度小数）+ 校验位
+//校验：校验位=湿度高位+湿度低位+温度高位+温度低位
+u8 DHT12_READ(void)
+{
+	u32 j;
+	u8 Humi_H,Humi_L,Temp_H,Temp_L,Temp_CAL,temp;
+
+	//主机发送起始信号
+	qcom_gpio_pin_dir(SDA, 0);//设为输出模式
+	qcom_gpio_pin_set(SDA, 0);//SEND_SDA=0;	//主机把数据总线（SDA）拉低
+	tx_thread_sleep(20);//拉低一段时间（至少18ms）， 通知传感器准备数据
+	qcom_gpio_pin_set(SDA, 1);//SEND_SDA=1;	 //释放总线
+	qcom_gpio_pin_dir(SDA, 1);;	//设为输入模式，判断传感器响应信号
+	us_delay(30);//延时30us
+
+	Sensor_AnswerFlag=0;	//传感器响应标志
+	//判断从机是否有低电平响应信号 如不响应则跳出，响应则向下运行	  
+	if(READ_SDA==0)
+	{
+		Sensor_AnswerFlag=1;	//收到起始信号
+
+		j=0;
+		while((!READ_SDA)) //判断从机发出 80us 的低电平响应信号是否结束	
+		{
+			if(++j>=500) //防止进入死循环
+			{
+				Sensor_ErrorFlag=1;
+				break;
+			}
+		}
+
+		j=0;
+		while(READ_SDA)//判断从机是否发出 80us 的高电平，如发出则进入数据接收状态
+		{
+			if(++j>=800) //防止进入死循环
+			{
+				Sensor_ErrorFlag=1;
+				break;
+			}		
+		}
+		//接收数据
+		Humi_H=DHT12_Rdata();
+		Humi_L=DHT12_Rdata();
+		Temp_H=DHT12_Rdata();	
+		Temp_L=DHT12_Rdata();
+		Temp_CAL=DHT12_Rdata();
+
+		temp=(u8)(Humi_H+Humi_L+Temp_H+Temp_L);//只取低8位
+
+		if(Temp_CAL==temp)//如果校验成功，往下运行
+		{
+			Humi=Humi_H*10+Humi_L; //湿度
+	
+			if(Temp_L&0X80)	//为负温度
+			{
+				Temprature =0-(Temp_H*10+((Temp_L&0x7F)));
+			}
+			else   //为正温度
+			{
+				Temprature=Temp_H*10+Temp_L;//为正温度
+			}
+			//判断数据是否超过量程（温度：-20℃~60℃，湿度20％RH~95％RH）
+			if(Humi>950) 
+			{
+			  Humi=950;
+			}
+			if(Humi<200)
+			{
+				Humi =200;
+			}
+			if(Temprature>600)
+			{
+			  Temprature=600;
+			}
+			if(Temprature<-200)
+			{
+				Temprature = -200;
+			}
+			//Temprature=Temprature/10;//计算为温度值
+			//Humi=Humi/10; //计算为湿度值
+			printf("\r\n: Temprature %d\r\n",Temprature); //显示温度
+			printf(" Humi %d  %%RH\r\n",Humi);//显示湿度	
+		}
+		
+		else
+		{
+		 	printf("CAL Error!!\r\n");
+			printf("%d \r%d \r%d \r%d \r%d \r%d \r\n",Humi_H,Humi_L,Temp_H,Temp_L,Temp_CAL,temp);
+			return 1;
+		}
+	}
+	else
+	{
+		Sensor_ErrorFlag=0;  //未收到传感器响应
+		printf("Sensor Error!!\r\n");
+		return 1;
+	}
+
+	return 0;
+}
 
 /*
 A_INT8 tSensor_byte_read(A_UINT8 addr)
@@ -253,10 +425,10 @@ int dht12_byte_read(A_UCHAR *data)
 		 }*/
 		if(need_read)
 		{
-			 ret = qcom_i2cm_read(I2CM_PIN_PAIR_2,0x5c,0x00,1,data,5);
+			 ret = qcom_i2cm_read(I2CM_PIN_PAIR_4,0x5c,0x00,1,data,5);
 			 if(ret<0)
 			 {
-				A_PRINTF("qcom_i2cm_read error ret=%d\n\n",ret);
+				A_PRINTF("4 qcom_i2cm_read error ret=%d\n\n",ret);
 				failure_cnt++;
 				if(failure_cnt > 10)
 				{
@@ -444,7 +616,9 @@ A_INT32 get_temperatue(void)
 		flag1 = 0;
 	}
 	#endif
-	return temperatue;
+
+	//return temperatue;
+	return Temprature;
 
 	
 }
@@ -465,23 +639,28 @@ A_INT32 get_humidity(void)
 	}
 #endif
 
-	return humidity;
+	//return humidity;
+	return Humi;
 }
 
 void   dht12_read_task()
 {
-	A_UINT8 data[5];
+	//A_UINT8 data[5];
 	int ret;
 	//float temperatue,humidity;
-	
-	//qcom_i2c_init(I2C_SCK_4,I2C_SDA_4,I2C_FREQ_50K);
-	qcom_i2cm_init(I2CM_PIN_PAIR_2,I2C_FREQ_50K,0);
-	//DHT12_Init();
 
-	printf("enter dht12_read_task\r\n");
+	#if 0
+	//qcom_i2c_init(I2C_SCK_4,I2C_SDA_4,I2C_FREQ_50K);
+	qcom_i2cm_init(I2CM_PIN_PAIR_4,I2C_FREQ_50K,0);
+	//DHT12_Init();
+	#else
+	DHT12_Init();
+	#endif
+	printf("enter dht12_read_task,signal 1-wire\r\n");
 
 	while(TRUE)
 	{
+		#if 0
 		ret = dht12_byte_read(data);
 		if(ret < 0)
 		{
@@ -511,6 +690,28 @@ void   dht12_read_task()
 		{
 			printf("dht12 sum crc check error,d0=%2x,d1=%2x,d2=%2x,d3=%2x,d4=%2x,\r\n",data[0],data[1],data[2],data[3],data[4]);
 		}
+
+		#else
+		if(need_read)
+		{
+			 ret = DHT12_READ();
+			 if(ret>0)
+			 {
+				A_PRINTF("DHT12_READ failed ret=%d\n\n",ret);
+				failure_cnt++;
+				if(failure_cnt > 10)
+				{
+					need_read = 0;
+					A_PRINTF("DHT12_READ error continous 10 error,no read again\n");
+				}
+			 }
+			 else
+			 {
+			 	failure_cnt = 0;
+			 }
+		}
+		
+		#endif
 		tx_thread_sleep(3000);
 	}
 }

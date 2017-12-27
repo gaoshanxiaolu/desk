@@ -44,6 +44,8 @@ static void spiTXword(uint16 tx_data16);
 /* Include auto generated header file of constants, approx 50 kb as 25 kw   */
 #define UWORD16 uint16
 #include "xap_code.h"
+#include "xap_code_node.h"
+
 #include "qcom/qcom_gpio.h"
 
 #define CS_PIN		0
@@ -167,6 +169,53 @@ void CSR1Kboot(void)
 
 }
 
+
+void NODE_CSR1Kboot(void)
+{
+    uint16 i;
+    uint16 addr;
+    uint16 len;
+    uint16 *pbuf;
+
+    gpio_spi_init(); //need "testgpio" to init it.
+
+    /* Reset the chip.  No need to clear this later, it is self clearing */
+    CSRspiTXword(0xF82F, 1);
+
+    /* wait for the interal boot hardware in CSR1000 to give up trying to find
+     * an image in external EEPROM or SPI Flash to download (that takes ~11ms).
+     * While the chip is checking for memory we can't boot the chip over SPI.
+     */
+    timeDelayInMS(15);
+
+    /* STOP the processor */
+    CSRspiTXword(0xF81D, 2);
+
+    /* download each section as a block transfer till we're done.
+     * the xap code structure is produced by the "xuv_to_h" utility
+     */
+    for (i = 0; i < XAP_CODE_STRUCT_SIZE_NODE; i += len)
+    {
+        addr = xap_code_struct_node[i++];
+        len  = xap_code_struct_node[i++];
+        pbuf = (uint16 *) &xap_code_struct_node[i];
+
+        CSRspiTXblock(addr, pbuf, len);
+		printf("addr=%x,len=%d\n",addr,len);
+    }
+
+    /* Magic toggle */
+    CSRspiTXword(0x0018, 1);
+    CSRspiTXword(0x0018, 0);
+
+    /* Set PC to zero */
+    CSRspiTXword(0xFFEA, 0);
+    CSRspiTXword(0xFFE9, 0);
+
+    /* And GO (which is really an "un-stop" :) */
+    CSRspiTXword(0xF81D, 0);
+
+}
 
 /*--------------------------------------------------------------------------*/
 /* Basic CSR SPI primitives live here                                       */

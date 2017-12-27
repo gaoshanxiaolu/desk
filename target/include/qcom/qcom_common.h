@@ -42,10 +42,10 @@
 #define HEHEDNS "dev.hehedesk.com"
 
 #define BLE_NODE_MAIN_V 1
-#define BLE_NODE_SECOND_V 1
+#define BLE_NODE_SECOND_V 0
 
 #define BLE_GW_MAIN_V 1
-#define BLE_GW_SECOND_V 1
+#define BLE_GW_SECOND_V 0
 
 enum DEV_TYPE
 {

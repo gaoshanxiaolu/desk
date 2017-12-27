@@ -43,7 +43,7 @@ static TX_MUTEX mutex_fd;
 
 #define DEFINE_FRAME_LEN   (16)
 
-#define DEFINE_FRAME_SIZE DEFINE_FRAME_LEN
+#define DEFINE_FRAME_SIZE (DEFINE_FRAME_LEN+2)
 //char *p[] = { "没人","正常","左倾","右倾","前倾","左前倾","右前倾" };
 char *p[] = { "no_body","normal","forward","left","right","left_forward","right_forward" };
 A_UINT8 last_index = 10;
@@ -52,14 +52,17 @@ uint8 skip_nbyte_find_head;
 static uint8 buf_frame[32];
 uint8 cmd_type;
 static uint8 key_frame[32];
+int mv,sv;
+int get_v_flag = 0;
+enum DEV_TYPE dev_type = UNDEF;
 
 bool find_sync_head(uint8 *data, uint8 len)
 {
 	uint8 i;
 
-	for(i=0;i<len-3;i++)
+	for(i=0;i<len-1;i++)
 	{
-		if(data[i] == 0xA1 && data[i+1] == 0xA2 && data[i+2] == 0xA3)
+		if(data[i] == 0x1b && data[i+1] == 0x2a)
 		{
 			skip_nbyte_find_head = i;
 			return TRUE;
@@ -94,6 +97,7 @@ bool is_exist_id(uint8_t *ids)
 {
 	if(node_cnt == 0)
 	{
+		cur_pos = 0;
 		return FALSE;
 	}
 
@@ -133,21 +137,22 @@ void add_node(uint8_t *ids,uint16 did,uint8 vol_per,uint8 type)
 
 	printf("->add id:%02x,%02x,%02x,%02x,%02x,did:%04x\n",ids[0],ids[1],ids[2],ids[3],ids[4],did);
 
+	cur_pos = node_cnt;
 	node_cnt++;
 
 }
 
 void upgrade_node(uint8 pos,uint16 did)
 {
-	nodes_info[pos].did = did;
+	nodes_info[pos].vol_per = did;
 
-	printf("->upgrade did, did:%04x\n",did);
+	//printf("->upgrade volper, volper:%04x\n",did);
 
 }
 
 void upgrade_pose_info(uint8 pose,uint16 did)
 {
-	uint8 i;
+	/*uint8 i;
 	bool get_did;
 
 	get_did = FALSE;
@@ -159,12 +164,12 @@ void upgrade_pose_info(uint8 pose,uint16 did)
 			get_did = TRUE;
 			break;
 		}
-	}
+	}*/
 
-	if(get_did)
+	//if(get_did)
 	{
-		nodes_info[i].pose = pose;
-		nodes_info[i].data_valid = TRUE;
+		nodes_info[cur_pos].pose = pose;
+		nodes_info[cur_pos].data_valid = TRUE;
 	}
 }
 
@@ -224,6 +229,51 @@ bool get_id_value(uint16 did,uint8 *dst_ids)
 	return get_did;
 
 }
+static  uint16 ccitt_table[256] = {
+0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7,
+0x8108, 0x9129, 0xA14A, 0xB16B, 0xC18C, 0xD1AD, 0xE1CE, 0xF1EF,
+0x1231, 0x0210, 0x3273, 0x2252, 0x52B5, 0x4294, 0x72F7, 0x62D6,
+0x9339, 0x8318, 0xB37B, 0xA35A, 0xD3BD, 0xC39C, 0xF3FF, 0xE3DE,
+0x2462, 0x3443, 0x0420, 0x1401, 0x64E6, 0x74C7, 0x44A4, 0x5485,
+0xA56A, 0xB54B, 0x8528, 0x9509, 0xE5EE, 0xF5CF, 0xC5AC, 0xD58D,
+0x3653, 0x2672, 0x1611, 0x0630, 0x76D7, 0x66F6, 0x5695, 0x46B4,
+0xB75B, 0xA77A, 0x9719, 0x8738, 0xF7DF, 0xE7FE, 0xD79D, 0xC7BC,
+0x48C4, 0x58E5, 0x6886, 0x78A7, 0x0840, 0x1861, 0x2802, 0x3823,
+0xC9CC, 0xD9ED, 0xE98E, 0xF9AF, 0x8948, 0x9969, 0xA90A, 0xB92B,
+0x5AF5, 0x4AD4, 0x7AB7, 0x6A96, 0x1A71, 0x0A50, 0x3A33, 0x2A12,
+0xDBFD, 0xCBDC, 0xFBBF, 0xEB9E, 0x9B79, 0x8B58, 0xBB3B, 0xAB1A,
+0x6CA6, 0x7C87, 0x4CE4, 0x5CC5, 0x2C22, 0x3C03, 0x0C60, 0x1C41,
+0xEDAE, 0xFD8F, 0xCDEC, 0xDDCD, 0xAD2A, 0xBD0B, 0x8D68, 0x9D49,
+0x7E97, 0x6EB6, 0x5ED5, 0x4EF4, 0x3E13, 0x2E32, 0x1E51, 0x0E70,
+0xFF9F, 0xEFBE, 0xDFDD, 0xCFFC, 0xBF1B, 0xAF3A, 0x9F59, 0x8F78,
+0x9188, 0x81A9, 0xB1CA, 0xA1EB, 0xD10C, 0xC12D, 0xF14E, 0xE16F,
+0x1080, 0x00A1, 0x30C2, 0x20E3, 0x5004, 0x4025, 0x7046, 0x6067,
+0x83B9, 0x9398, 0xA3FB, 0xB3DA, 0xC33D, 0xD31C, 0xE37F, 0xF35E,
+0x02B1, 0x1290, 0x22F3, 0x32D2, 0x4235, 0x5214, 0x6277, 0x7256,
+0xB5EA, 0xA5CB, 0x95A8, 0x8589, 0xF56E, 0xE54F, 0xD52C, 0xC50D,
+0x34E2, 0x24C3, 0x14A0, 0x0481, 0x7466, 0x6447, 0x5424, 0x4405,
+0xA7DB, 0xB7FA, 0x8799, 0x97B8, 0xE75F, 0xF77E, 0xC71D, 0xD73C,
+0x26D3, 0x36F2, 0x0691, 0x16B0, 0x6657, 0x7676, 0x4615, 0x5634,
+0xD94C, 0xC96D, 0xF90E, 0xE92F, 0x99C8, 0x89E9, 0xB98A, 0xA9AB,
+0x5844, 0x4865, 0x7806, 0x6827, 0x18C0, 0x08E1, 0x3882, 0x28A3,
+0xCB7D, 0xDB5C, 0xEB3F, 0xFB1E, 0x8BF9, 0x9BD8, 0xABBB, 0xBB9A,
+0x4A75, 0x5A54, 0x6A37, 0x7A16, 0x0AF1, 0x1AD0, 0x2AB3, 0x3A92,
+0xFD2E, 0xED0F, 0xDD6C, 0xCD4D, 0xBDAA, 0xAD8B, 0x9DE8, 0x8DC9,
+0x7C26, 0x6C07, 0x5C64, 0x4C45, 0x3CA2, 0x2C83, 0x1CE0, 0x0CC1,
+0xEF1F, 0xFF3E, 0xCF5D, 0xDF7C, 0xAF9B, 0xBFBA, 0x8FD9, 0x9FF8,
+0x6E17, 0x7E36, 0x4E55, 0x5E74, 0x2E93, 0x3EB2, 0x0ED1, 0x1EF0
+};
+uint16 crc_ccitt(uint8 *q, uint8 len);
+
+uint16 crc_ccitt(uint8 *q, uint8 len)
+{
+	uint16 crc = 0;
+
+	while (len-- > 0)
+		crc = ccitt_table[(crc >> 8 ^ *q++) & 0xff] ^ (crc << 8);
+	return ~crc;
+
+}
 
 int is_exist_light(uint16 *did)
 {
@@ -251,52 +301,74 @@ void parse_uart_data(void)
 	{
 		BQPeekBytes(buf_frame,DEFINE_FRAME_SIZE);
 
+		/*int m;
+		for(m=0;m<DEFINE_FRAME_SIZE;m++)
+			printf("%02x",buf_frame[m]);
+		printf("\n");*/
 		find_head = find_sync_head(buf_frame,DEFINE_FRAME_SIZE);
 
 		if(!find_head)
 		{
-			BQPopBytes(buf_frame,DEFINE_FRAME_SIZE - 2);
+			BQPopBytes(buf_frame,DEFINE_FRAME_SIZE - 1);
+			printf("skip 17\n");
 			return;
 		}
 
 		if(skip_nbyte_find_head > 0)
 		{
 			BQPopBytes(buf_frame,skip_nbyte_find_head);
+			printf("skip1 %d\n",skip_nbyte_find_head);
 			return;
 		}
 
-		if((buf_frame[13] != 0xA5 || buf_frame[14] != 0xA6 || buf_frame[15] != 0xA7))//frame tail check
-		{
-			BQCommitLastPeek();
-			return;
-		}
-
-		cmd_type = buf_frame[3];
+		uint16 sum = 0;
+		//for(i=0;i<size-4;i++)
+		//	sum += objdata[i+2];
+		sum = crc_ccitt(buf_frame+2,DEFINE_FRAME_SIZE-4);
 		
-		if(cmd_type == 0)//bypass to phone
+		uint16 stdsum = (buf_frame[DEFINE_FRAME_SIZE-2] << 8) | buf_frame[DEFINE_FRAME_SIZE-1];
+		
+		if(stdsum != sum)
 		{
-			memcpy(key_frame,&buf_frame[4],6);
+			printf("uart crc check error\n");
+			return;
+		}
+
+		cmd_type = buf_frame[14];
+		
+		if(cmd_type == 0x66)
+		{
+			mv = buf_frame[2];
+			sv = buf_frame[3];
+			if(buf_frame[4] == 1)
+			{
+				get_v_flag = TRUE;
+				printf(">>>>> GW ble version %d.%d\r\n",mv,sv);
+				dev_type = C_GW;
+
+			}
+			else if(buf_frame[4] == 2)
+			{
+				get_v_flag = TRUE;
+				printf(">>>>> NODE ble version %d.%d\r\n",mv,sv);
+				dev_type = C_NODE;
+
+			}
+			else
+			{
+				printf("dev type error\r\n");
+			}
+
+
 		}
 		else
 		{
-			printf("ble i2c read key failed\r\n");
-		}
-
-		adc = buf_frame[10] << 8 | buf_frame[11];
-		ppr = buf_frame[12] >> 2;
-		chg = (buf_frame[12] & 0x02) >> 1;
-		status = buf_frame[12] & 0x01;
-		if(print_log_cnt++ > 10)
-		{
-			print_log_cnt = 0;
-			printf("ppr=%d,chg=%d,adc=%dmv,%s\r\n",ppr,chg,adc,status?"charge on":"charge off");
-			printf("%02x,%02x,%02x,%02x,%02x,%02x,\r\n",key_frame[0],key_frame[1],key_frame[2],key_frame[3],key_frame[4],key_frame[5]);
-			//printf("cur pose %s\r\n",p[last_index]);
+			get_key_frame = TRUE;
 		}
 
 		BQCommitLastPeek();
 
-		get_key_frame = TRUE;
+		
 		
 	}
 
@@ -452,7 +524,7 @@ void gen_grid(void)
 		//printf("\n");
 	}
 
-	printf("\n");
+	//printf("\n");
 
 }
 static void print_debug(A_UINT8 *data, A_UINT16 len)
@@ -632,8 +704,9 @@ void add_have_body(void)
 	if(!body_flag)
 	{
 		qcom_timer_start(&nobody_timeout);
+		body_flag = 1;
 	}
-	body_flag = 1;
+	
 }
 
 void remove_body(void)
@@ -641,9 +714,10 @@ void remove_body(void)
 	if(body_flag)
 	{
 		qcom_timer_stop(&nobody_timeout);
+		
+		body_flag = 0;
 	}
-	body_flag = 0;
-
+	
 }
 void update_chair_status(void);
 
@@ -728,17 +802,17 @@ void deci_pose(void)
 		//{
 			//if(last_index > 8)
 			//	last_index = 0;
-			uint8 tmp_ids[ID_LEN];
-			if(get_id_value(cur_did,tmp_ids))
-			{
-				printf("id:%02x%02x%02x%02x%02x---> pose %s\r\n",tmp_ids[0],tmp_ids[1],tmp_ids[2],tmp_ids[3],tmp_ids[4],p[index]);
-			}
-			else
-			{
-				printf("not get id, %04x,pose %s\r\n",cur_did,p[index]);
-			}
+			//uint8 tmp_ids[ID_LEN];
+			//if(get_id_value(cur_did,tmp_ids))
+			//{
+			//	printf("id:%02x%02x%02x%02x%02x---> pose %s\r\n",tmp_ids[0],tmp_ids[1],tmp_ids[2],tmp_ids[3],tmp_ids[4],p[index]);
+			//}
+			//else
+			//{
+			//	printf("not get id, %04x,pose %s\r\n",cur_did,p[index]);
+			//}
 
-			update_chair_status();
+			//update_chair_status();
 			
 			//last_index = index;
 			//if(get_recv_id)
@@ -756,6 +830,7 @@ void deci_pose(void)
 A_UINT32 one_frame_len;
 A_CHAR one_frame_data[64];
 A_UINT8 all_data[512];
+#if 0
 static unsigned char HexToAsc(unsigned char aChar){
     if((aChar>=0x30)&&(aChar<=0x39))
         aChar -= 0x30;
@@ -766,6 +841,7 @@ static unsigned char HexToAsc(unsigned char aChar){
     else aChar = 0xff;
     return aChar; 
 }
+#endif
 
 A_UINT32 check_gw_uart_head_tail(A_UINT8 *pbuf,A_UINT32 len)
 {
@@ -837,9 +913,7 @@ A_CHAR is_get_one_frame(void)
 	return 0;
 
 }
-int mv,sv;
-int get_v_flag = 0;
-enum DEV_TYPE dev_type = UNDEF;
+
 
 enum DEV_TYPE get_dev_type(void)
 {
@@ -862,6 +936,7 @@ uint16 get_second_ver(void)
 {
 	return sv;
 }
+#if 0
 void parse_gw_uart_frame(void)
 {
 	//char *string, *stopstring;
@@ -987,7 +1062,33 @@ void parse_gw_uart_frame(void)
 		printf("csr data len error\r\n");
 	}
 }
+#else
+void parse_gw_uart_frame(void)
+{
 
+	uint16 i;
+	for(i=0;i<6;i++)
+		key_frame[i] = buf_frame[i+7];
+	
+	uint8 id[5];
+	for(i=0;i<5;i++)
+		id[i] = buf_frame[i+2];
+
+	uint8 vol = buf_frame[13];
+
+	printf("id=%02x%02x%02x%02x%02x,key=%2x,key=%2x,key=%2x,key=%2x,key=%2x,key=%2x,vol=%2x\n",id[0],id[1],id[2],id[3],id[4],key_frame[0],key_frame[1],key_frame[2],key_frame[3],key_frame[4],key_frame[5],vol);
+	//add_chair_id(key_frame);
+	if(!is_exist_id(id))
+	{
+		add_node(id,0,vol,0);
+	}
+	else//chair power off, when join net, malloc new did,so upgrade did info
+	{
+		upgrade_node(cur_pos,vol);
+	}
+}
+
+#endif
 #define need_read_len 1024
 A_INT32 chair_uart_fd = -1;
 static int uart_fd_lock = 0;
@@ -1132,14 +1233,55 @@ void send_query_version_cmd(void)
 	}
 }
 
+extern int desk_is_moved;
+int need_move_desk;
 void nobody_timeout_callback(unsigned int argc, void *argv)
 {
-	up_desk();
-	qcom_thread_msleep(200);
-	down_desk();
-	qcom_thread_msleep(200);
+	body_flag = 0;
+	
+	need_move_desk = 1;
+
+	
 }
 
+void   smart_chair_timeout_move_task()
+{
+	printf("\r\nenter smart_chair_timeout_move_task \r\n");
+	
+	while(1)
+	{
+		if(!need_move_desk)
+		{
+			qcom_thread_msleep(500);
+			continue;
+		}
+
+		need_move_desk = 0;
+		
+		if(!desk_is_moved)
+		{
+			printf("nobody timeout, move desk\n");
+			up_desk();
+			qcom_thread_msleep(200);
+			stop_desk();
+			qcom_thread_msleep(200);
+			down_desk();
+			qcom_thread_msleep(200);
+			stop_desk();
+			qcom_thread_msleep(200);
+
+		}
+		else
+		{
+			printf("nobody timeout,  desk is moving\n");
+		}
+
+
+
+	}
+}
+
+#if 0
 void   smart_chair_gateway_uart_read_task()
 {
     A_UINT32 uart_length = need_read_len;
@@ -1225,7 +1367,96 @@ void   smart_chair_gateway_uart_read_task()
         }
     }
 }
+#else
+void   smart_chair_gateway_uart_read_task()
+{
+    A_UINT32 uart_length = need_read_len;
+    A_CHAR uart_buff[need_read_len];
+	A_UINT32 buf_len;
+	
+    q_fd_set fd;
+    struct timeval tmo;
+    int ret;
+    qcom_uart_para com_uart_cfg;
+	
+    com_uart_cfg.BaudRate=     115200; /* 1Mbits */
+    com_uart_cfg.number=       8;
+    com_uart_cfg.StopBits =    1;
+    com_uart_cfg.parity =      0;
+    com_uart_cfg.FlowControl = 0;
 
+   qcom_single_uart_init((A_CHAR *)"UART1");
+
+    chair_uart_fd = qcom_uart_open((A_CHAR *)"UART1");
+    if (chair_uart_fd == -1) {
+        A_PRINTF("qcom_uart_open uart1 failed...\r\n");
+        return;
+    }
+
+    qcom_set_uart_config((A_CHAR *)"UART1",&com_uart_cfg);
+
+   printf("\r\nenter chair uart data thread \r\n");
+
+   qcom_timer_init(&nobody_timeout,nobody_timeout_callback,NULL,1000*60*120,ONESHOT);
+
+   uart_fd_lock = 0;
+
+   TSK_SEM_INIT;
+
+   /*if (QURT_EOK != qurt_mutex_create(&uart_fd_lock))
+   {
+	   SWAT_PTF("uart_fd_lock_mutex_create FAIL!\n");
+   }*/
+
+   buf_len = 0;
+    while (1)
+    {
+        FD_ZERO(&fd);
+        FD_SET(chair_uart_fd, &fd);
+        tmo.tv_sec = 30;
+        tmo.tv_usec = 0;
+
+		memset(uart_buff, 0x00,  sizeof(uart_buff));
+        ret = qcom_select(2, &fd, NULL, NULL, &tmo);
+        if (ret == 0) 
+		{
+            //A_PRINTF("UART receive timeout\n");
+        } 
+		else 
+		{
+            if(FD_ISSET(chair_uart_fd, &fd)) 
+			{
+		  		uart_length = need_read_len;
+                qcom_uart_read(chair_uart_fd, uart_buff, &uart_length);
+                if (uart_length) 
+				{
+					BQSafeQueueBytes((const uint8 *)uart_buff, uart_length);
+					//printf("%d\n",uart_length);
+                }
+
+				parse_uart_data();
+
+				if(get_key_frame)
+				{
+					parse_gw_uart_frame();
+					
+					//if(get_key_frame)
+					//{
+						gen_grid();
+						deci_pose();
+					//}
+				}
+
+            }
+			else
+			{
+             A_PRINTF("UART something is error!\n");           		
+        	}
+        }
+    }
+}
+
+#endif
 A_CHAR socket_chair_tx_buffer[] = { \
 	
 	0xc0,//head
@@ -1476,5 +1707,6 @@ A_INT32 start_smart_chair_socket_tx_app(A_INT32 argc, A_CHAR *argv[])
 A_INT32 start_smart_chair_gw_uart_app(A_INT32 argc, A_CHAR *argv[])
 {
 	qcom_task_start(smart_chair_gateway_uart_read_task, 2, 2048, 80);
+		qcom_task_start(smart_chair_timeout_move_task, 2, 2048, 80);
 }
 

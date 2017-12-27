@@ -319,7 +319,7 @@ void upgrade_ble_task()
 				else if(get_config_dev_type() == C_NODE)
 				{
 					printf("force upgrade ble to node\n\r");
-					//NODE_CSR1Kboot();
+					NODE_CSR1Kboot();
 					
 					printf("upgrade ble node finished\n\r");
 				}
@@ -346,7 +346,7 @@ void upgrade_ble_task()
 				if(get_main_ver() != BLE_NODE_MAIN_V || get_second_ver() != BLE_NODE_SECOND_V)
 				{
 					printf("upgrade ble  node\n\r");
-					//NODE_CSR1Kboot();
+					NODE_CSR1Kboot();
 					//clear_version_flag();
 					cnt = 0;
 					printf("upgrade ble node finished\n\r");
