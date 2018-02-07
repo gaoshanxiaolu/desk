@@ -425,10 +425,10 @@ int dht12_byte_read(A_UCHAR *data)
 		 }*/
 		if(need_read)
 		{
-			 ret = qcom_i2cm_read(I2CM_PIN_PAIR_4,0x5c,0x00,1,data,5);
+			 ret = qcom_i2cm_read(I2CM_PIN_PAIR_2,0x5c,0x00,1,data,5);
 			 if(ret<0)
 			 {
-				A_PRINTF("4 qcom_i2cm_read error ret=%d\n\n",ret);
+				A_PRINTF("2 qcom_i2cm_read error ret=%d\n\n",ret);
 				failure_cnt++;
 				if(failure_cnt > 10)
 				{
@@ -645,7 +645,7 @@ A_INT32 get_humidity(void)
 
 void   dht12_read_task()
 {
-	//A_UINT8 data[5];
+	A_UINT8 data[5];
 	int ret;
 	//float temperatue,humidity;
 
@@ -699,10 +699,11 @@ void   dht12_read_task()
 			 {
 				A_PRINTF("DHT12_READ failed ret=%d\n\n",ret);
 				failure_cnt++;
-				if(failure_cnt > 10)
+				if(failure_cnt > 3)
 				{
 					need_read = 0;
-					A_PRINTF("DHT12_READ error continous 10 error,no read again\n");
+					A_PRINTF("DHT12_READ error continous 3 error,no read again\n");
+					break;
 				}
 			 }
 			 else
@@ -714,6 +715,77 @@ void   dht12_read_task()
 		#endif
 		tx_thread_sleep(3000);
 	}
+
+	need_read=1;
+	failure_cnt = 0;
+
+	printf("enter dht12_read_task,signal i2c\r\n");
+
+#if 1
+	//qcom_i2c_init(I2C_SCK_4,I2C_SDA_4,I2C_FREQ_50K);
+	qcom_i2cm_init(I2CM_PIN_PAIR_2,I2C_FREQ_50K,0);
+	//DHT12_Init();
+#else
+	DHT12_Init();
+#endif
+
+	while(TRUE)
+	{
+		#if 1
+		ret = dht12_byte_read(data);
+		if(ret < 0)
+		{
+			tx_thread_sleep(3000);
+			continue;
+		}
+		//DHT12_ReadByte(data);
+		
+		A_UINT8 sum_crc;
+		sum_crc = data[0]+data[1]+data[2]+data[3];
+		if(sum_crc == data[4])
+		{
+			printf("dht12 humidity = %d.%d\r\n",data[0],data[1]);
+			Humi = data[0]*10 + data[1];
+			if(data[3] & 0x80)
+			{
+				printf("dht12 temperatue = -%d.%d\r\n",data[2],data[3]&0x7f);
+				Temprature = (data[2]*10 + (data[3]&0x7f))* -1;
+			}
+			else
+			{
+				printf("dht12 temperatue = +%d.%d\r\n",data[2],data[3]);
+				Temprature = (data[2]*10 + (data[3]&0x7f));
+			}
+		}
+		else
+		{
+			printf("dht12 sum crc check error,d0=%2x,d1=%2x,d2=%2x,d3=%2x,d4=%2x,\r\n",data[0],data[1],data[2],data[3],data[4]);
+		}
+
+		#else
+		if(need_read)
+		{
+			 ret = DHT12_READ();
+			 if(ret>0)
+			 {
+				A_PRINTF("DHT12_READ failed ret=%d\n\n",ret);
+				failure_cnt++;
+				if(failure_cnt > 10)
+				{
+					need_read = 0;
+					A_PRINTF("DHT12_READ error continous 10 error,no read again\n");
+				}
+			 }
+			 else
+			 {
+				failure_cnt = 0;
+			 }
+		}
+		
+		#endif
+		tx_thread_sleep(3000);
+}
+
 }
 
 A_INT32 start_dht12_app(A_INT32 argc, A_CHAR *argv[])

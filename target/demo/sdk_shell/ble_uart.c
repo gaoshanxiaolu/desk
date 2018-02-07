@@ -271,11 +271,26 @@ void up_desk(void)
 {
 	desk_is_moved = 1;
 #ifdef CONTROL_LOGIC_LEVEL
+#if 1
+				//(*((volatile A_UINT32 *)0x1402c)) =  0x1;//hw write GPIO32 to up,
+				(*((volatile A_UINT32 *)0x14030)) =  0x1;//hw write GPIO32 to down,
+				
+				(*((volatile A_UINT32 *)0x14004)) =  0x40000000;//hw write GPIO30 to up, 
+				//(*((volatile A_UINT32 *)0x14008)) =  0x40000000;//hw write GPIO30 to down,
+				
+				(*((volatile A_UINT32 *)0x14004)) =  0x80000000;//hw write GPIO31 to up,
+				//(*((volatile A_UINT32 *)0x14008)) =  0x80000000;//hw write GPIO31 to down,
+				
+				(*((volatile A_UINT32 *)0x1402c)) =  0x2;//hw write GPIO33 to up,
+				//(*((volatile A_UINT32 *)0x14030)) =  0x2;//hw write GPIO33 to down,
+#else
+
 		qcom_gpio_pin_set(pin_m1,!TRUE);
 		qcom_gpio_pin_set(pin_m2,!FALSE);
-		qcom_gpio_pin_set(pin_gold,!FALSE);
+		
 		qcom_gpio_pin_set(pin_zi,!FALSE);
-
+		qcom_gpio_pin_set(pin_gold,!FALSE);
+#endif
 	
 	
 	
@@ -298,12 +313,27 @@ void down_desk(void)
 {
 	desk_is_moved = 1;
 #ifdef CONTROL_LOGIC_LEVEL
+#if 1
+				(*((volatile A_UINT32 *)0x1402c)) =  0x1;//hw write GPIO32 to up,
+				//(*((volatile A_UINT32 *)0x14030)) =  0x1;//hw write GPIO32 to down,
+				
+				//(*((volatile A_UINT32 *)0x14004)) =  0x40000000;//hw write GPIO30 to up, 
+				(*((volatile A_UINT32 *)0x14008)) =  0x40000000;//hw write GPIO30 to down,
+				
+				(*((volatile A_UINT32 *)0x14004)) =  0x80000000;//hw write GPIO31 to up,
+				//(*((volatile A_UINT32 *)0x14008)) =  0x80000000;//hw write GPIO31 to down,
+				
+				(*((volatile A_UINT32 *)0x1402c)) =  0x2;//hw write GPIO33 to up,
+				//(*((volatile A_UINT32 *)0x14030)) =  0x2;//hw write GPIO33 to down,
+#else
+
 		qcom_gpio_pin_set(pin_m1,!FALSE);
 		qcom_gpio_pin_set(pin_m2,!TRUE);
-		qcom_gpio_pin_set(pin_gold,!FALSE);
+		
 		qcom_gpio_pin_set(pin_zi,!FALSE);
+		qcom_gpio_pin_set(pin_gold,!FALSE);
 
-	
+	#endif
 	
 	
 #else
@@ -374,11 +404,25 @@ void stop_desk(void)
 	desk_is_moved = 0;
 	
 	#ifdef CONTROL_LOGIC_LEVEL
+	#if 1
+(*((volatile A_UINT32 *)0x1402c)) =  0x1;//hw write GPIO32 to up,
+//(*((volatile A_UINT32 *)0x14030)) =  0x1;//hw write GPIO32 to down,
+
+(*((volatile A_UINT32 *)0x14004)) =  0x40000000;//hw write GPIO30 to up, 
+//(*((volatile A_UINT32 *)0x14008)) =  0x40000000;//hw write GPIO30 to down,
+
+(*((volatile A_UINT32 *)0x14004)) =  0x80000000;//hw write GPIO31 to up,
+//(*((volatile A_UINT32 *)0x14008)) =  0x80000000;//hw write GPIO31 to down,
+
+(*((volatile A_UINT32 *)0x1402c)) =  0x2;//hw write GPIO33 to up,
+//(*((volatile A_UINT32 *)0x14030)) =  0x2;//hw write GPIO33 to down,
+
+#else	
 	qcom_gpio_pin_set(pin_m1,TRUE);
 	qcom_gpio_pin_set(pin_m2,TRUE);	
 	qcom_gpio_pin_set(pin_gold,TRUE);
 	qcom_gpio_pin_set(pin_zi,TRUE);
-
+#endif
 	#else
 	qcom_gpio_pin_set(pin_m1,FALSE);
 	qcom_gpio_pin_set(pin_m2,FALSE);	
@@ -392,11 +436,26 @@ void stop_desk(void)
 void free_desk_pin(void)
 {
 	#ifdef CONTROL_LOGIC_LEVEL
+#if 1
+	(*((volatile A_UINT32 *)0x1402c)) =  0x1;//hw write GPIO32 to up,
+	//(*((volatile A_UINT32 *)0x14030)) =  0x1;//hw write GPIO32 to down,
+	
+	(*((volatile A_UINT32 *)0x14004)) =  0x40000000;//hw write GPIO30 to up, 
+	//(*((volatile A_UINT32 *)0x14008)) =  0x40000000;//hw write GPIO30 to down,
+	
+	(*((volatile A_UINT32 *)0x14004)) =  0x80000000;//hw write GPIO31 to up,
+	//(*((volatile A_UINT32 *)0x14008)) =  0x80000000;//hw write GPIO31 to down,
+	
+	(*((volatile A_UINT32 *)0x1402c)) =  0x2;//hw write GPIO33 to up,
+	//(*((volatile A_UINT32 *)0x14030)) =  0x2;//hw write GPIO33 to down,
+	
+#else
+
 	qcom_gpio_pin_set(pin_m1,TRUE);
 	qcom_gpio_pin_set(pin_m2,TRUE);	
 	qcom_gpio_pin_set(pin_gold,TRUE);
 	qcom_gpio_pin_set(pin_zi,TRUE);
-
+#endif
 	#else
 	qcom_gpio_pin_set(pin_m1,FALSE);
 	qcom_gpio_pin_set(pin_m2,FALSE);	
@@ -408,11 +467,27 @@ void gen_m_signal(void)
 {
 
 #ifdef CONTROL_LOGIC_LEVEL
+
+#if 1
+(*((volatile A_UINT32 *)0x1402c)) =  0x1;//hw write GPIO32 to up,
+//(*((volatile A_UINT32 *)0x14030)) =  0x1;//hw write GPIO32 to down,
+
+(*((volatile A_UINT32 *)0x14004)) =  0x40000000;//hw write GPIO30 to up, 
+//(*((volatile A_UINT32 *)0x14008)) =  0x40000000;//hw write GPIO30 to down,
+
+(*((volatile A_UINT32 *)0x14004)) =  0x80000000;//hw write GPIO31 to up,
+//(*((volatile A_UINT32 *)0x14008)) =  0x80000000;//hw write GPIO31 to down,
+
+//(*((volatile A_UINT32 *)0x1402c)) =  0x2;//hw write GPIO33 to up,
+(*((volatile A_UINT32 *)0x14030)) =  0x2;//hw write GPIO33 to down,
+
+#else
 	qcom_gpio_pin_set(pin_m1,!FALSE);
 	qcom_gpio_pin_set(pin_m2,!FALSE);	
-	qcom_gpio_pin_set(pin_gold,!TRUE);
+	
 	qcom_gpio_pin_set(pin_zi,!FALSE);
-
+	qcom_gpio_pin_set(pin_gold,!TRUE);
+#endif
 
 #else
 	qcom_gpio_pin_set(pin_m1,FALSE);
@@ -435,12 +510,29 @@ void gen_1234_signal(A_UINT8 num)
 	if(num == 1)
 	{
 #ifdef CONTROL_LOGIC_LEVEL
+
+#if 1
+//	(*((volatile A_UINT32 *)0x1402c)) =  0x1;//hw write GPIO32 to up,
+	(*((volatile A_UINT32 *)0x14030)) =  0x1;//hw write GPIO32 to down,
+	
+//	(*((volatile A_UINT32 *)0x14004)) =  0x40000000;//hw write GPIO30 to up, 
+	(*((volatile A_UINT32 *)0x14008)) =  0x40000000;//hw write GPIO30 to down,
+	
+	(*((volatile A_UINT32 *)0x14004)) =  0x80000000;//hw write GPIO31 to up,
+//	(*((volatile A_UINT32 *)0x14008)) =  0x80000000;//hw write GPIO31 to down,
+	
+	(*((volatile A_UINT32 *)0x1402c)) =  0x2;//hw write GPIO33 to up,
+//	(*((volatile A_UINT32 *)0x14030)) =  0x2;//hw write GPIO33 to down,
+	
+#else
+
 	qcom_gpio_pin_set(pin_m1,!TRUE);
 	qcom_gpio_pin_set(pin_m2,!TRUE); 
-	qcom_gpio_pin_set(pin_gold,!FALSE);
+	
 	qcom_gpio_pin_set(pin_zi,!FALSE);
+	qcom_gpio_pin_set(pin_gold,!FALSE);
 
-
+#endif
 
 #else
 	qcom_gpio_pin_set(pin_m1,TRUE);
@@ -458,19 +550,35 @@ void gen_1234_signal(A_UINT8 num)
 	else if(num == 2)
 	{
 #ifdef CONTROL_LOGIC_LEVEL
+
+#if 1
+		(*((volatile A_UINT32 *)0x1402c)) =  0x1;//hw write GPIO32 to up,
+		//(*((volatile A_UINT32 *)0x14030)) =  0x1;//hw write GPIO32 to down,
+		
+		(*((volatile A_UINT32 *)0x14004)) =  0x40000000;//hw write GPIO30 to up, 
+		//(*((volatile A_UINT32 *)0x14008)) =  0x40000000;//hw write GPIO30 to down,
+		
+		//(*((volatile A_UINT32 *)0x14004)) =  0x80000000;//hw write GPIO31 to up,
+		(*((volatile A_UINT32 *)0x14008)) =  0x80000000;//hw write GPIO31 to down,
+		
+		(*((volatile A_UINT32 *)0x1402c)) =  0x2;//hw write GPIO33 to up,
+		//(*((volatile A_UINT32 *)0x14030)) =  0x2;//hw write GPIO33 to down,
+#else
 		qcom_gpio_pin_set(pin_m1,!FALSE);
 		qcom_gpio_pin_set(pin_m2,!FALSE);	
-		qcom_gpio_pin_set(pin_gold,!FALSE);
+		
 		qcom_gpio_pin_set(pin_zi,!TRUE);
+		qcom_gpio_pin_set(pin_gold,!FALSE);
 
-
+#endif
 	
 	
 #else
 		qcom_gpio_pin_set(pin_m1,FALSE);
 		qcom_gpio_pin_set(pin_m2,FALSE);	
-		qcom_gpio_pin_set(pin_gold,FALSE);
+		
 		qcom_gpio_pin_set(pin_zi,TRUE);
+		qcom_gpio_pin_set(pin_gold,FALSE);
 
 		
 				
@@ -483,12 +591,27 @@ void gen_1234_signal(A_UINT8 num)
 	else if(num == 3)
 	{
 #ifdef CONTROL_LOGIC_LEVEL
+#if 1
+				(*((volatile A_UINT32 *)0x1402c)) =  0x1;//hw write GPIO32 to up,
+				//(*((volatile A_UINT32 *)0x14030)) =  0x1;//hw write GPIO32 to down,
+				
+				//(*((volatile A_UINT32 *)0x14004)) =  0x40000000;//hw write GPIO30 to up, 
+				(*((volatile A_UINT32 *)0x14008)) =  0x40000000;//hw write GPIO30 to down,
+				
+				//(*((volatile A_UINT32 *)0x14004)) =  0x80000000;//hw write GPIO31 to up,
+				(*((volatile A_UINT32 *)0x14008)) =  0x80000000;//hw write GPIO31 to down,
+				
+				(*((volatile A_UINT32 *)0x1402c)) =  0x2;//hw write GPIO33 to up,
+				//(*((volatile A_UINT32 *)0x14030)) =  0x2;//hw write GPIO33 to down,
+#else
+
 		qcom_gpio_pin_set(pin_m1,!FALSE);
 		qcom_gpio_pin_set(pin_m2,!TRUE); 
-		qcom_gpio_pin_set(pin_gold,!FALSE);
+		
 		qcom_gpio_pin_set(pin_zi,!TRUE);
+		qcom_gpio_pin_set(pin_gold,!FALSE);
 
-
+#endif
 
 	
 	
@@ -508,12 +631,25 @@ void gen_1234_signal(A_UINT8 num)
 	else if(num == 4)
 	{
 #ifdef CONTROL_LOGIC_LEVEL
-				
+#if 1
+		//(*((volatile A_UINT32 *)0x1402c)) =  0x1;//hw write GPIO32 to up,
+		(*((volatile A_UINT32 *)0x14030)) =  0x1;//hw write GPIO32 to down,
+		
+		(*((volatile A_UINT32 *)0x14004)) =  0x40000000;//hw write GPIO30 to up, 
+		//(*((volatile A_UINT32 *)0x14008)) =  0x40000000;//hw write GPIO30 to down,
+		
+		//(*((volatile A_UINT32 *)0x14004)) =  0x80000000;//hw write GPIO31 to up,
+		(*((volatile A_UINT32 *)0x14008)) =  0x80000000;//hw write GPIO31 to down,
+		
+		(*((volatile A_UINT32 *)0x1402c)) =  0x2;//hw write GPIO33 to up,
+		//(*((volatile A_UINT32 *)0x14030)) =  0x2;//hw write GPIO33 to down,
+#else				
 		qcom_gpio_pin_set(pin_m1,!TRUE);
 		qcom_gpio_pin_set(pin_m2,!FALSE);	
-		qcom_gpio_pin_set(pin_gold,!FALSE);
+		
 		qcom_gpio_pin_set(pin_zi,!TRUE);
-			
+		qcom_gpio_pin_set(pin_gold,!FALSE);
+#endif			
 #else
 				
 		qcom_gpio_pin_set(pin_m1,TRUE);
@@ -976,6 +1112,7 @@ void MorX_signel_task()
 			tx_thread_sleep(100);
 			free_desk_pin();
     		tx_thread_sleep(M_INTERVAL_N_SIG_TIMER);
+			//gen_m_signal();
     		gen_1234_signal(1);
 			tx_thread_sleep(100);
 			free_desk_pin();
@@ -1016,6 +1153,9 @@ void MorX_signel_task()
 
     		tx_thread_sleep(M_INTERVAL_N_SIG_TIMER);
     		gen_1234_signal(4);
+
+			tx_thread_sleep(100);
+			free_desk_pin();
             mx_sig = INVALID_XM;
     	}
     	else if(mx_sig == X1)
@@ -1069,7 +1209,7 @@ A_INT32 start_desk_motor_app(A_INT32 argc, A_CHAR *argv[])
 
 A_INT32 start_desk_MorX_signel_app(A_INT32 argc, A_CHAR *argv[])
 {
-	qcom_task_start(MorX_signel_task, 2, 2048, 80);
+	qcom_task_start(MorX_signel_task, 2, 2048, 80);//999 最高优先级
 }
 
 A_INT32 start_desk_led_disp_app(A_INT32 argc, A_CHAR *argv[])

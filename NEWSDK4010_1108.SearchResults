@@ -1,388 +1,290 @@
----- priority Matches (83 in 21 files) ----
-Aj_peer_q.c (target\...\src):513
-     * Send suites in this priority order
-     */
-    if (AJ_IsSuiteEnabled(AUTH_SUITE_ECDHE_ECDSA, authContext.version >> 16)) {
-Aj_peer_q.c (target\...\src):632
-            // Pick the highest priority suite, which happens to be the highest integer
-            authContext.suite = (suites[i] > authContext.suite) ? suites[i] : authContext.suite;
-        }
-Bluetooth.c (target\demo\sdk_shell):3445
-         DBG_PRINT("Coex Priority is 0~2, 0 disable the CSR8x11 BT_STATUS, 1 enable BT_STATUS but low priority, 2 enable BT_STATUS but some high priority\n");
-      }
-      return;
-BTPSKRNL.c (target\...\btpskrnl):40
-   /* Denotes the priority of the thread being created using the thread */
-   /* create function.                                                  */
-#define DEFAULT_THREAD_PRIORITY                         (16)
-BTPSKRNL.c (target\...\btpskrnl):664
-         /* Next attempt to create a thread using the default priority. */
-         if(tx_thread_create(&(ThreadWrapperInfo->Thread), ThreadWrapperInfo->ThreadName, ThreadWrapper, (DWord_t)ThreadWrapperInfo, ThreadWrapperInfo->ThreadStack, StackSize, DEFAULT_THREAD_PRIORITY, DEFAULT_THREAD_PRIORITY, DEFAULT_THREAD_TIME_SLICE, TX_AUTO_START) == TX_SUCCESS)
-            ret_val = (Thread_t)(&(ThreadWrapperInfo->Thread));
-OTPAPI.h (target\...\include):1262
-   /* highest priority and The Name parameter will be ignored when      */
-   /* Backup is set TRUE.  Also, when the Create parameter is TRUE the  */
-   /* Name parameter must also be specified.                            */
-Qcom_timer.h (target\include\qcom):96
-/*Real-time timer which has high priority, TBD for ROM support*/
-A_UINT32 _qcom_isr_timer_start(void (*fn) (void *), void *arg, A_UINT32 timeout, A_UINT32 type);
-void _qcom_isr_timer_stop();
-Qcom_timer.h (target\include\qcom):121
-/*Real-time timer which has high priority, TBD for ROM support*/
-/*This timer uses LF1 and normally qcom api timer uses LF0, we put LF1 in high priority
-** handler to make it real-time.
-*/
-Qurt_mutex.h (target\include\qurt):9
-  - Recursive mutex with priority inheritance.
+---- tx_thread_sleep Matches (65 in 16 files) ----
+Ble_uart.c (target\demo\sdk_shell):150
+    tx_thread_sleep(1000);
 
-  The two mutex types have different performance; in particular, mutex lock operations are slower with priority inheritance mutexes. 
+   printf("enter uart desk data thread \r\n");
+Ble_uart.c (target\demo\sdk_shell):683
+		tx_thread_sleep(100);
+	}
+	
+Ble_uart.c (target\demo\sdk_shell):745
+		tx_thread_sleep(2000);
+		
+		qcom_gpio_pin_set(pin_light,TRUE);
+Ble_uart.c (target\demo\sdk_shell):753
+		tx_thread_sleep(2000);
 
-  @note1hang Both mutex behaviors may not be supported on some target platforms.
-Qurt_mutex.h (target\include\qurt):114
-  If a thread performs a lock operation on a mutex (priority inheritance or recursive 
-  mutex) that is already being used by another thread, the thread is suspended. When the
-  mutex available becomes again (because the other thread has unlocked it), the thread is
-Qurt_mutex.h (target\include\qurt):119
-  If a thread is suspended on a mutex that supports a priority inheritance mutex, and the 
-  priority of the suspended thread is higher than the priority of the thread that has 
-  locked the mutex, the thread with the mutex acquires the higher priority of the
-  suspended thread. The locker thread blocks until the lock is available. The priority
-  of the thread released by the mutex is restored to its original priority state.
+		#else
+Ble_uart.c (target\demo\sdk_shell):763
+		tx_thread_sleep(2000);
 
-  A thread is not suspended if it locks a recursive mutex that it has already locked by
-Qurt_mutex.h (target\include\qurt):129
-  The lock operation is slower for priority inheritance mutexes than it is 
-  for recursive mutexes.
+		#endif
+Ble_uart.c (target\demo\sdk_shell):814
+		tx_thread_sleep(delay_polling_ms);
+		
+		ir1 = qcom_gpio_pin_get(pin_ir1);
+Ble_uart.c (target\demo\sdk_shell):1044
+			tx_thread_sleep(100);
+			free_desk_pin();
+    		tx_thread_sleep(M_INTERVAL_N_SIG_TIMER);
+			//gen_m_signal();
+    		gen_1234_signal(1);
+			tx_thread_sleep(100);
+			free_desk_pin();
 
-Qurt_mutex.h (target\include\qurt):155
-  If a thread performs a lock operation on a mutex (priority inheritance or recursive 
-  mutex) that is already being used by another thread, the thread is suspended. When the
-  mutex becomes available again (because the other thread has unlocked it), the thread is
-Qurt_mutex.h (target\include\qurt):163
-  If a thread is suspended on a mutex that supports priority inheritance mutex, and the 
-  priority of the suspended thread is higher than the priority of the thread that has
-  locked the mutex, the thread with the mutex acquires the higher priority of the
-  suspended thread. The locker thread blocks until the lock is available or time exceeds
-  the timeout interval. The priority of the thread that released the mutex is restored 
-  to its original priority state.
+Ble_uart.c (target\demo\sdk_shell):1057
+			tx_thread_sleep(100);
+			free_desk_pin();
 
-  A thread is not suspended if it locks a recursive mutex that it has already locked by
-Qurt_mutex.h (target\include\qurt):174
-  The lock operation is slower for priority inheritance mutexes than it
-  is for recursive mutexes
+    		tx_thread_sleep(M_INTERVAL_N_SIG_TIMER);
+    		gen_1234_signal(2);
+			tx_thread_sleep(100);
+			free_desk_pin();
 
-Qurt_mutex.h (target\include\qurt):204
-  waiting on the mutex is awakened. If the awakened thread has higher priority than the
-  current thread, a context switch occurs.
+Ble_uart.c (target\demo\sdk_shell):1070
+			tx_thread_sleep(100);
+			free_desk_pin();
 
-  When a thread unlocks a priority inheritance mutex, its thread priority is restored to
-  its original value from any higher-priority value that it acquired from another thread
-  suspended on the mutex.
+    		tx_thread_sleep(M_INTERVAL_N_SIG_TIMER);
+    		gen_1234_signal(3);
+			tx_thread_sleep(100);
+			free_desk_pin();
 
-Qurt_thread.h (target\include\qurt):28
-#define QURT_THREAD_ATTR_PRIORITY_MAX        0    /**< QuRT thread attribute priority maximum. */
-#define QURT_THREAD_ATTR_PRIORITY_DEFAULT    16   /**< QuRT thread attribute priority default. */
-#define QURT_THREAD_ATTR_PRIORITY_MIN        31   /**< QuRT thread attribute priority minimum. */
-#define QURT_THREAD_ATTR_NAME_MAXLEN         10   /**< QuRT thread attribute name maximum length. */
-#define QURT_THREAD_DEFAULT_STACK_SIZE       128  /**< QuRT thread default stack size. */
-Qurt_thread.h (target\include\qurt):100
-  Sets the thread priority to be assigned to a thread. Thread priorities are specified
-  as numeric values in the range 0 - (#QURT_THREAD_ATTR_PRIORITY_MAX - #QURT_THREAD_ATTR_PRIORITY_MIN), with 0 representing
-  the highest priority.
-  
-  @note1hang The QuRT library can be configured at build time to have different priority ranges. 
-  
-  @datatypes
-Qurt_thread.h (target\include\qurt):110
-  @param[in] priority Thread priority.
+Ble_uart.c (target\demo\sdk_shell):1083
+			tx_thread_sleep(100);
+			free_desk_pin();
 
-  @return
-Qurt_thread.h (target\include\qurt):119
-void qurt_thread_attr_set_priority (qurt_thread_attr_t *attr, uint16 priority);
+    		tx_thread_sleep(M_INTERVAL_N_SIG_TIMER);
+    		gen_1234_signal(4);
 
-/**@ingroup func_qurt_thread_attr_set_stack_size
-Qurt_thread.h (target\include\qurt):235
-  the same priority) for execution. 
+			tx_thread_sleep(100);
+			free_desk_pin();
+            mx_sig = INVALID_XM;
+Ble_uart.c (target\demo\sdk_shell):1096
+			tx_thread_sleep(100);
+			free_desk_pin();
+
+Ble_uart.c (target\demo\sdk_shell):1104
+			tx_thread_sleep(100);
+			free_desk_pin();
+
+Ble_uart.c (target\demo\sdk_shell):1112
+			tx_thread_sleep(100);
+			free_desk_pin();
+
+Ble_uart.c (target\demo\sdk_shell):1120
+			tx_thread_sleep(100);
+			free_desk_pin();
+
+Ble_uart.c (target\demo\sdk_shell):1127
+    		tx_thread_sleep(100);
+    	}
+    }
+BTPSKRNL.c (target\...\btpskrnl):138
+   tx_thread_sleep(Ticks);
+}
+
+Csr1k_host_boot.c (f:\):344
+	tx_thread_sleep(20);//拉低一段时间（至少18ms）， 通知传感器准备数据
+	qcom_gpio_pin_set(SDA, 1);//SEND_SDA=1;	 //释放总线
+	qcom_gpio_pin_dir(SDA, 1);;	//设为输入模式，判断传感器响应信号
+Dual_uart_demo.c (target\...\dual_uart_demo):403
+    tx_thread_sleep(1000);
+    A_PRINTF("uart0_fd %d uart1_fd %d uart2_fd %d\n", uart0_fd, uart1_fd, uart2_fd);
+    A_PRINTF("Firmware version    : %s\n", ver);
+    tx_thread_sleep(10000);
+
+    uart_length = strlen((A_CHAR *)uart_test_str0);
+Dual_uart_demo.c (target\...\dual_uart_demo):435
+                //tx_thread_sleep(100);
+                if (uart_length)
+                {                    
+Dual_uart_demo.c (target\...\dual_uart_demo):495
+                            //tx_thread_sleep(100);
+                        }                        
+                    }
+Dual_uart_demo.c (target\...\dual_uart_demo):584
+                // tx_thread_sleep(100);
+                if (uart_length)
+                {                    
+Dual_uart_demo.c (target\...\dual_uart_demo):606
+                            //tx_thread_sleep(100);
+                        }                        
+                    }
+Dual_uart_demo.c (target\...\dual_uart_demo):650
+                // tx_thread_sleep(100);
+                if (uart_length)
+                {
+Dual_uart_demo.c (target\...\dual_uart_demo):672
+                            //tx_thread_sleep(100);
+                        }                        
+                    }
+Dual_uart_demo.c (target\...\dual_uart_demo):760
+        tx_thread_sleep(1000);
+    }
+    qcom_set_uart_config((A_CHAR *)"UART0",&com_uart_cfg);
+Dual_uart_demo.c (target\...\dual_uart_demo):764
+    tx_thread_sleep(1000);
+    A_PRINTF("uart0_fd %d uart1_fd %d, uart2_fd %d\n", uart0_fd, uart1_fd, uart2_fd);
+    tx_thread_sleep(10000);
+
+    uart_length = strlen((A_CHAR *)uart_test_str0);
+Dual_uart_demo.c (target\...\dual_uart_demo):790
+                tx_thread_sleep(100);
+                if (uart_length) {
+                    A_PRINTF("uart0 receive length:%d\n", uart_length);
+Dual_uart_demo.c (target\...\dual_uart_demo):794
+                    tx_thread_sleep(100);
+                }
+            } else if (FD_ISSET(uart1_fd, &fd)) {
+Dual_uart_demo.c (target\...\dual_uart_demo):798
+                tx_thread_sleep(100);
+                if (uart_length) {
+                    A_PRINTF("uart1 receive length:%d\n", uart_length);
+Dual_uart_demo.c (target\...\dual_uart_demo):805
+                    tx_thread_sleep(100);
+                }
+            }  else if (FD_ISSET(uart2_fd, &fd)) {
+Dual_uart_demo.c (target\...\dual_uart_demo):809
+                tx_thread_sleep(100);
+                if (uart_length) {
+                    A_PRINTF("uart2 receive length:%d\n", uart_length);
+Dual_uart_demo.c (target\...\dual_uart_demo):816
+                    tx_thread_sleep(100);
+                }
+            } else {
+I2c_test.c (target\demo\sdk_shell):287
+	tx_thread_sleep(20);//拉低一段时间（至少18ms）， 通知传感器准备数据
+	qcom_gpio_pin_set(SDA, 1);//SEND_SDA=1;	 //释放总线
+	qcom_gpio_pin_dir(SDA, 1);;	//设为输入模式，判断传感器响应信号
+I2c_test.c (target\demo\sdk_shell):667
+			tx_thread_sleep(3000);
+			continue;
+		}
+I2c_test.c (target\demo\sdk_shell):715
+		tx_thread_sleep(3000);
+	}
+}
+Shell_cmds.c (target\demo\sdk_shell):307
+    tx_thread_sleep(sleep_seconds * TXQC_TICK_PER_SEC);
    
-  @return 
-Qurt_thread.h (target\include\qurt):262
-  Gets the priority of the specified thread. 
+    qcom_timer_start(&shell_timer);
+Swat_parse.c (target\demo\sdk_shell):161
+        tx_thread_sleep(1000);
+        for (i = 0; i < count; i++)
+        {
+Swat_parse.c (target\demo\sdk_shell):173
+            //tx_thread_sleep(10);
+            printf("bssid = %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",info[i].bssid[0],info[i].bssid[1],info[i].bssid[2],info[i].bssid[3],info[i].bssid[4],info[i].bssid[5]);
 
-  Returns the thread priority of the specified thread.
+        //   tx_thread_sleep(10);
+            printf("channel = %d\n",info[i].channel);
 
-  Thread priorities are specified as numeric values in a range as large as 0 - (QURT_THREAD_MAX_PRIORITIES -1), 
-Qurt_thread.h (target\include\qurt):268
-  0 represents the highest possible thread priority. 
+Swat_parse.c (target\demo\sdk_shell):452
+	        	tx_thread_sleep(120);
+			}
+		}
+Swat_parse.c (target\demo\sdk_shell):470
+	        	tx_thread_sleep(120);
+			}
+		}
+Swat_parse.c (target\demo\sdk_shell):554
+	        	tx_thread_sleep(120);
+			}
+		}
+Swat_parse.c (target\demo\sdk_shell):2887
+           tx_thread_sleep(1000);
+           printf("count : %d\n", count);
+           for (i = 0; i < count; i++)
+Swat_wmiconfig_misc.c (target\...\sdk_shell):323
+        tx_thread_sleep(100);
+   }
+}
+Swat_wmiconfig_misc.c (target\...\sdk_shell):425
+	tx_thread_sleep(100);
+}
 
-  @note1hang QuRT can be configured at build time to have different priority ranges.
+Swat_wmiconfig_network.c (target\...\sdk_shell):2290
+			tx_thread_sleep(500);
+			goto finished;
+		}
+Swat_wmiconfig_network.c (target\...\sdk_shell):2346
+			tx_thread_sleep(200);
+		}
+		
+Swat_wmiconfig_network.c (target\...\sdk_shell):2354
+			tx_thread_sleep(500);
+		}
+		
+Test_thread.c (target\...\testmod):24
+        tx_thread_sleep(60000);
+        A_PRINTF("mod task running\n");
+    }
+Test_thread.c (target\...\testmod):61
+    tx_thread_sleep(1000);
 
-  @datatypes
-Qurt_thread.h (target\include\qurt):279
-  0 - ( QURT_THREAD_MAX_PRIORITIES -1) -- Thread priority value.
+    tx_thread_terminate(&testmod_thread);
+Tx_api.h (target\include\threadx):1018
+#define tx_thread_sleep                             _tx_thread_sleep
+#define tx_thread_stack_error_notify                _tx_thread_stack_error_notify
+#define tx_thread_suspend                           _tx_thread_suspend
+Tx_api.h (target\include\threadx):1142
+#define tx_thread_sleep                             _tx_thread_sleep
+#define tx_thread_stack_error_notify                _tx_thread_stack_error_notify
+#define tx_thread_suspend                           _txr_thread_suspend
+Tx_api.h (target\include\threadx):1254
+#define tx_thread_sleep                             _tx_thread_sleep
+#define tx_thread_stack_error_notify                _tx_thread_stack_error_notify
+#define tx_thread_suspend                           _txe_thread_suspend
+Tx_api.h (target\include\threadx):1482
+UINT        tx_thread_sleep(ULONG timer_ticks);
+UINT        tx_thread_stack_error_notify(VOID (*stack_error_handler)(TX_THREAD *));
+UINT        tx_thread_suspend(TX_THREAD *thread_ptr);
+Tx_user.h (target\include\threadx):133
+/* Determine if timer expirations (application timers, timeouts, and tx_thread_sleep calls 
+   should be processed within the a system timer thread or directly in the timer ISR. 
+   By default, the timer thread is used. When the following is defined, the timer expiration 
+Uart_at_main.c (target\...\uart_at):1024
+        tx_thread_sleep(1000);
+        for (i = 0; i < count; i++)
+        {
+Upgrade_task.c (target\demo\sdk_shell):197
+			tx_thread_sleep(1000);
+			cnt_timeout++;
+			if(cnt_timeout > 1800)
+Upgrade_task.c (target\demo\sdk_shell):272
+			tx_thread_sleep(100);
 
-  @dependencies
-Qurt_thread.h (target\include\qurt):288
-  Sets the priority of the specified thread.
+		}
+Upgrade_task.c (target\demo\sdk_shell):284
+			tx_thread_sleep(1000);
+		}
+    	
+Upgrade_task.c (target\demo\sdk_shell):305
+		tx_thread_sleep(10000);
+		
+		if(!query_version_flag())
+Upgrade_task.c (target\demo\sdk_shell):376
+			//tx_thread_sleep(1000);
+		}
+		
+Watch_dog_task.c (target\demo\sdk_shell):16
+    	tx_thread_sleep(2000);
 
-  Thread priorities are specified as numeric values in a range as large as 0 - (QURT_THREAD_MAX_PRIORITIES -1), 
-Qurt_thread.h (target\include\qurt):292
-  0 represents the highest possible thread priority.
+		qcom_watchdog_feed();
+Wx_heart_package.c (target\...\sdk_shell):565
+		tx_thread_sleep(1500);
 
-  @note1hang QuRT can be configured at build time to have different priority ranges.
+		
+Wx_heart_package.c (target\...\sdk_shell):632
+    			tx_thread_sleep(1000);
+				/*connect_route_cnt++;
+				if(connect_route_cnt > 60 && is_has_ssid_pwd())
+Wx_heart_package.c (target\...\sdk_shell):673
+				tx_thread_sleep(1000);
+				continue;
 
-  @datatypes
-Qurt_thread.h (target\include\qurt):300
-  @param[in] newprio       New thread priority value.
-
-  @return
-  #QURT_EOK -- Thread priority set success. \n
-  #QURT_EINVALID -- Invalid argument. \n
-  #QURT_EFAILED -- Thread priority set failed. 
-    
-  @dependencies
-Swat_task_manage.c (target\...\sdk_shell):207
-    /* default priority is 4 */
-    /* set the task name */
-    taskName[2 * taskIdx] = '0' + taskId % 255;
-Targaddrs.h (target\include):236
-    /* Percentage of high priority RX traffic to total expected RX traffic -
-     * applicable only to ar6004 */
-    A_UINT32               hi_hp_rx_traffic_ratio;                    /* 0xd8 */
-Txqc_indirection.h (target\...\threadx):212
-    VOID (* __tx_mutex_priority_change)(TX_THREAD *thread_ptr, UINT priority);
-    UINT (* __tx_mutex_put)(TX_MUTEX *mutex_ptr);
-    VOID *(* _txqc_app_entry_get)(VOID);
-Txqc_indirection.h (target\...\threadx):244
-                UINT priority, UINT preempt_threshold, 
-                ULONG time_slice, UINT auto_start);
-    UINT (* __tx_thread_delete)(TX_THREAD *thread_ptr);
-Txqc_indirection.h (target\...\threadx):249
-                UINT *priority, UINT *preemption_threshold, ULONG *time_slice, 
-                TX_THREAD **next_thread, TX_THREAD **next_suspended_thread);
-    VOID (* __tx_thread_initialize)(VOID);
-Tx_api.h (target\include\threadx):79
-/*                                            priority-inheritance struct */ 
-/*                                            members in TX_THREAD,changed*/ 
-/*                                            user event comments, added  */ 
-Tx_api.h (target\include\threadx):434
-    /* Define the priority inheritance variables. These will be used
-       to manage priority inheritance changes applied to this thread 
-       as a result of mutex get operations.  */
-    UINT                tx_thread_user_priority;            
-Tx_api.h (target\include\threadx):460
-    /* Define the number of priority inversions for this thread.  */
-    ULONG               tx_thread_performance_priority_inversion_count;
-
-Tx_api.h (target\include\threadx):726
-    /* Define the priority inheritance flag.  If this flag is set, priority
-       inheritance will be in effect.  */
-    UINT                tx_mutex_inherit;
-Tx_api.h (target\include\threadx):730
-    /* Define the save area for the owning thread's original priority.  */
-    UINT                tx_mutex_original_priority;
-
-Tx_api.h (target\include\threadx):744
-    /* Define the priority of the highest priority thread waiting for
-       this mutex.  */
-    UINT                tx_mutex_highest_priority_waiting;
-Tx_api.h (target\include\threadx):767
-    /* Define the total number of priority inversions.  */
-    ULONG               tx_mutex_performance_priority_inversion_count;
-
-    /* Define the total number of priority inheritance conditions.  */
-    ULONG               tx_mutex_performance_priority_inheritance_count;
-#endif
-Tx_api.h (target\include\threadx):1445
-                    UINT priority, UINT preempt_threshold, 
-                    ULONG time_slice, UINT auto_start);
-#else
-Tx_api.h (target\include\threadx):1452
-                    UINT priority, UINT preempt_threshold, 
-                    ULONG time_slice, UINT auto_start, UINT thread_control_block_size);
-#else
-Tx_api.h (target\include\threadx):1458
-                    UINT priority, UINT preempt_threshold, 
-                    ULONG time_slice, UINT auto_start, UINT thread_control_block_size);
-#endif
-Tx_api.h (target\include\threadx):1466
-                    UINT *priority, UINT *preemption_threshold, ULONG *time_slice, 
-                    TX_THREAD **next_thread, TX_THREAD **next_suspended_thread);
-UINT        tx_thread_performance_info_get(TX_THREAD *thread_ptr, ULONG *resumptions, ULONG *suspensions, 
-Tx_mutex.h (target\include\threadx):69
-/*                                            in mutex priority change,   */ 
-/*                                            resulting in version 5.5    */ 
-/*  07-15-2011     William E. Lamie         Modified comment(s),          */ 
-Tx_mutex.h (target\include\threadx):135
-VOID        __tx_mutex_priority_change(TX_THREAD *thread_ptr, UINT priority);
-
-
-Tx_mutex.h (target\include\threadx):196
-/* Define the total number of priority inversions.  */
-
-MUTEX_DECLARE  ULONG        _tx_mutex_performance_priority_inversion_count;
-Tx_mutex.h (target\include\threadx):201
-/* Define the total number of priority inheritance conditions.  */
-
-MUTEX_DECLARE  ULONG        _tx_mutex_performance_priority_inheritance_count;
-Tx_port.h (target\include\threadx):224
-/* Define the priority levels for ThreadX.  Legal values range
-   from 32 to 1024 and MUST be evenly divisible by 32.  */
-
-Tx_port.h (target\include\threadx):292
-/* Define the system timer thread's default stack size and priority.  These are only applicable
-   if TX_TIMER_PROCESS_IN_ISR is not defined.  */
-
-Tx_port.h (target\include\threadx):309
-#define TX_TIMER_THREAD_PRIORITY                0           /* Default timer thread priority    */ 
-#endif
-
-Tx_thread.h (target\include\threadx):113
-/* Define the MOD32 bit set macro that is used to set/clear a priority bit within a specific
-   priority group.  */
-
-#if TX_MAX_PRIORITIES > 32
-Tx_thread.h (target\include\threadx):129
-/* Define the DIV32 bit set macro that is used to set/clear a priority group bit and is
-   only necessary when using priorities greater than 32.  */
-
-Tx_thread.h (target\include\threadx):284
-                UINT priority, UINT preempt_threshold, 
-                ULONG time_slice, UINT auto_start);
-UINT        __tx_thread_delete(TX_THREAD *thread_ptr);
-Tx_thread.h (target\include\threadx):290
-                UINT *priority, UINT *preemption_threshold, ULONG *time_slice, 
-                TX_THREAD **next_thread, TX_THREAD **next_suspended_thread);
-VOID        __tx_thread_initialize(VOID);
-Tx_thread.h (target\include\threadx):336
-                UINT priority, UINT preempt_threshold, 
-                ULONG time_slice, UINT auto_start, UINT thread_control_block_size);
-UINT        _txe_thread_delete(TX_THREAD *thread_ptr);
-Tx_thread.h (target\include\threadx):341
-                UINT *priority, UINT *preemption_threshold, ULONG *time_slice, 
-                TX_THREAD **next_thread, TX_THREAD **next_suspended_thread);
-UINT        _txe_thread_preemption_change(TX_THREAD *thread_ptr, UINT new_threshold,
-Tx_thread.h (target\include\threadx):412
-/* Define the 32-bit priority bit-maps. There is one priority bit map for each
-   32 priority levels supported. If only 32 priorities are supported there is 
-   only one bit map. Each bit within a priority bit map represents that one 
-   or more threads at the associated thread priority are ready.  */ 
-
-THREAD_DECLARE  ULONG           _tx_thread_priority_maps[TX_MAX_PRIORITIES/32];
-Tx_thread.h (target\include\threadx):420
-/* Define the priority map active bit map that specifies which of the previously 
-   defined priority maps have something set. This is only necessary if more than 
-   32 priorities are supported.  */
-
-Tx_thread.h (target\include\threadx):431
-/* Define the 32-bit preempt priority bit maps.  There is one preempt bit map 
-   for each 32 priority levels supported. If only 32 priorities are supported 
-   there is only one bit map. Each set set bit corresponds to a preempted priority 
-   level that had preemption-threshold active to protect against preemption of a 
-   range of relatively higher priority threads.  */
-
-THREAD_DECLARE  ULONG           _tx_thread_preempted_maps[TX_MAX_PRIORITIES/32];
-Tx_thread.h (target\include\threadx):449
-/* Define the variable that holds the highest priority group ready for 
-   execution.  It is important to note that this is not necessarily the same
-   as the priority of the thread pointed to by _tx_execute_thread.  */
-
-THREAD_DECLARE  UINT            _tx_thread_highest_priority;
-Tx_thread.h (target\include\threadx):457
-   are ready at that priority group.  For example, index 10 in this array
-   represents the first thread ready at priority 10.  If this entry is NULL,
-   no threads are ready at that priority.  */
-
-THREAD_DECLARE  TX_THREAD *     _tx_thread_priority_list[TX_MAX_PRIORITIES];
-Tx_thread.h (target\include\threadx):550
-/* Define the total number of priority inversions. Each time a thread is blocked by
-   a mutex owned by a lower-priority thread, this variable is incremented.  */
-
-THREAD_DECLARE  ULONG           _tx_thread_performance_priority_inversion_count;
-Tx_timer.h (target\include\threadx):219
-/* Define the variable that holds the timer thread's priority.  */
-
-TIMER_DECLARE UINT      _tx_timer_priority;
-Tx_trace.h (target\include\threadx):69
-/*                                            and corrected priority      */ 
-/*                                            assignment in event trace,  */ 
-/*                                            resulting in version 5.3    */ 
-Tx_trace.h (target\include\threadx):77
-/*                                            priority, resulting in      */ 
-/*                                            version 5.4                 */ 
-/*  07-15-2011     William E. Lamie         Modified comment(s), and      */ 
-Tx_trace.h (target\include\threadx):233
-#define TX_TRACE_OBJECT_TYPE_MUTEX                          5           /* P1 = priority inheritance flag                    */ 
-#define TX_TRACE_OBJECT_TYPE_EVENT_FLAGS                    6           /* none                                              */ 
-#define TX_TRACE_OBJECT_TYPE_BLOCK_POOL                     7           /* P1 = total blocks, P2 = block size                */ 
-Tx_trace.h (target\include\threadx):265
-             Current Thread                         events or the thread preemption-threshold/priority for thread events.
-             Preemption-Threshold/
-             Priority]
-Tx_trace.h (target\include\threadx):365
-#define TX_TRACE_THREAD_CREATE                              100         /* I1 = thread ptr, I2 = priority, I3 = stack ptr, I4 = stack_size          */
-#define TX_TRACE_THREAD_DELETE                              101         /* I1 = thread ptr, I2 = stack ptr                                          */
-#define TX_TRACE_THREAD_ENTRY_EXIT_NOTIFY                   102         /* I1 = thread ptr, I2 = thread state, I3 = stack ptr                       */
-Tx_trace.h (target\include\threadx):373
-#define TX_TRACE_THREAD_PRIORITY_CHANGE                     108         /* I1 = thread ptr, I2 = new priority, I3 = old priority, I4 = thread state */
-#define TX_TRACE_THREAD_RELINQUISH                          109         /* I1 = stack ptr, I2 = next thread ptr                                     */
-#define TX_TRACE_THREAD_RESET                               110         /* I1 = thread ptr, I2 = thread state                                       */
-Uart_at_task.c (target\demo\uart_at):193
-    /* default priority is 4 */
-    /* set the task name */
-    taskName[2 * taskIdx] = '0' + taskId % 255;
-Utility.c (target\tool\linux):407
-/** Log message with highest priority (logNote, logNorm, logVerb, logDebug, logTrace) */
-void logNote(const char *format, ...)
-{
-Utility.c (target\tool\linux):422
-/** Log message with 2. highest priority (logNote, logNorm, logVerb, logDebug, logTrace) */
-void logNorm(const char *format, ...)
-{
-Utility.c (target\tool\linux):437
-/** Log message with 3. highest priority (logNote, logNorm, logVerb, logDebug, logTrace) */
-void logVerb(const char *format, ...)
-{
-Utility.c (target\tool\linux):452
-/** Log message with 4. priority (logNote, logNorm, logVerb, logDebug, logTrace) */
-void logDebug(const char *format, ...)
-{
-Utility.c (target\tool\linux):467
-/** Log message with lowest priority (logNote, logNorm, logVerb, logDebug, logTrace) */
-void logTrace(const char *format, ...)
-{
-Wmi.h (target\include):1529
-    A_UINT8         userPriority;            /* 802.1D user priority */
-    A_UINT8         nominalPHY;              /* nominal phy rate */
-} POSTPACK WMI_CREATE_PSTREAM_CMD;
-Wmi.h (target\include):2324
-                                3       a2dp traffic is high priority
-                                4       Fw detect the role of bluetooth.
-                                5       No Stomping BT during WLAN Scan/Connection
-Xtensa_rtos.h (target\include\threadx):140
-priority (level). This consists of an array of function pointers indexed
-by interrupt priority, with index 0 being the user exception handler hook.
-Each entry in the array is initially 0, and may be replaced by a function 
-pointer of type XT_INTEXC_HOOK. A handler may be uninstalled by installing 0.
-Xtensa_rtos.h (target\include\threadx):145
-The handler for low and medium priority obeys ABI conventions so may be coded
-in C. For the exception handler, the cause is the contents of the EXCCAUSE
-reg, and the result is -1 if handled, else the cause (still needs handling).
-Xtensa_rtos.h (target\include\threadx):154
-High priority handlers (including NMI) must be coded in assembly, are always
-called by 'call0' regardless of ABI, must preserve all registers except a0,
-and must not use or modify the interrupted stack. The hook argument 'cause'
-Xtensa_rtos.h (target\include\threadx):159
-discussion in high priority interrupts in xtensa_vectors.S). The handler
-therefore should be coded to prototype 'void h(void)' even though it plugs
-into an array of handlers of prototype 'unsigned h(unsigned)'.
-Xtensa_timer.h (target\include\threadx):60
-and priority. User may specify a timer by defining XT_TIMER_INDEX with -D,
-in which case its validity is checked (it must exist in this core and must 
-not be on a high priority interrupt - an error will be reported in invalid).
-Otherwise select the first low or medium priority interrupt timer available.
-*/  
-#ifndef XT_TIMER_INDEX
-Xtensa_timer.h (target\include\threadx):103
-  #error "The timer interrupt cannot be high priority (use medium or low)."
-#endif
-
+Wx_heart_package.c (target\...\sdk_shell):687
+				tx_thread_sleep(1000);
+				has_connect_ok_failed++;
+				if(has_connect_ok_failed > 60)

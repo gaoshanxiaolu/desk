@@ -302,12 +302,12 @@ void upgrade_ble_task()
 	{
 		send_query_version_cmd();
 
-		tx_thread_sleep(3000);
+		tx_thread_sleep(10000);
 		
 		if(!query_version_flag())
 		{
 			cnt++;
-			#define QUERY_TIMEOUT_CNT 20
+			#define QUERY_TIMEOUT_CNT 10
 			//printf("cnt =%d,dev type %d\n\r",cnt,get_config_dev_type());
 			if(cnt >= QUERY_TIMEOUT_CNT)//60s 没有查询到ble设备的返回类型,通过保存ble设备类型，强制升级
 			{

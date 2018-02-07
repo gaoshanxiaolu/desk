@@ -527,7 +527,7 @@ void gen_grid(void)
 	//printf("\n");
 
 }
-static void print_debug(A_UINT8 *data, A_UINT16 len)
+/*static void print_debug(A_UINT8 *data, A_UINT16 len)
 {
     int i;
 
@@ -536,7 +536,7 @@ static void print_debug(A_UINT8 *data, A_UINT16 len)
         printf("0x%02x,",data[i]);
     }
     printf("\r\n");
-}
+}*/
 
 int pose_judeg(void)
 {
@@ -1075,8 +1075,9 @@ void parse_gw_uart_frame(void)
 		id[i] = buf_frame[i+2];
 
 	uint8 vol = buf_frame[13];
+	uint8 seq = buf_frame[15];
 
-	printf("id=%02x%02x%02x%02x%02x,key=%2x,key=%2x,key=%2x,key=%2x,key=%2x,key=%2x,vol=%2x\n",id[0],id[1],id[2],id[3],id[4],key_frame[0],key_frame[1],key_frame[2],key_frame[3],key_frame[4],key_frame[5],vol);
+	printf("id=%02x%02x%02x%02x%02x,keys=%2x%2x%2x%2x%2x%2x,vol=%2x,seq=%d\n",id[0],id[1],id[2],id[3],id[4],key_frame[0],key_frame[1],key_frame[2],key_frame[3],key_frame[4],key_frame[5],vol,seq);
 	//add_chair_id(key_frame);
 	if(!is_exist_id(id))
 	{
@@ -1397,7 +1398,7 @@ void   smart_chair_gateway_uart_read_task()
 
    printf("\r\nenter chair uart data thread \r\n");
 
-   qcom_timer_init(&nobody_timeout,nobody_timeout_callback,NULL,1000*60*120,ONESHOT);
+   qcom_timer_init(&nobody_timeout,nobody_timeout_callback,NULL,1000*60,ONESHOT);
 
    uart_fd_lock = 0;
 
@@ -1673,8 +1674,8 @@ void socket_send_schair_data_task()
 		{
 			printf("send error %d\r\n",send_len);
 		}
-		printf("chair data:");
-		print_debug((uint8*)socket_chair_tx_buffer, sizeof(socket_chair_tx_buffer));
+		//printf("chair data:");
+		//print_debug((uint8*)socket_chair_tx_buffer, sizeof(socket_chair_tx_buffer));
 		
 		qcom_socket_close(socketLocal);
 

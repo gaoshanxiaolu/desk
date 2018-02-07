@@ -699,6 +699,9 @@ void desk_recv_socket_thread()
 			has_connect_ok_failed = 0;
 
 			//qcom_setsockopt(socketLocal,SOL_SOCKET,SO_RCVTIMEO,(char *)&rx_timeout,sizeof(A_INT32));
+			//struct timeval timeout;
+			//timeout.tv_sec=0;
+			//timeout.tv_usec=1000*100;
 			//qcom_setsockopt(socketLocal,SOL_SOCKET,SO_RCVTIMEO,(char *)&timeout,sizeof(struct timeval));
 			
 			conn_serv_ok = 1;
@@ -727,7 +730,7 @@ void desk_recv_socket_thread()
 			}
             else
             {
-                printf("recv timeout\r\n");
+                printf("qcom_recv recv timeout\r\n");
 				qcom_socket_close(socketLocal);
 				conn_serv_ok = 0;
 				continue;

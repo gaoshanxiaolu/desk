@@ -202,8 +202,18 @@ qcom_task_start(void (*fn) (unsigned int), unsigned int arg, int stk_size, int t
                          (void (*)(unsigned long)) fn, 0, stk, stk_size, 4, 4, TX_NO_TIME_SLICE,
                          TX_AUTO_START);
 #else
-    ret = tx_thread_create(pthr, (char *) &taskName[2 * taskIdx], (void (*)(unsigned long)) fn, arg,
+
+	if(tk_ms == 999)
+	{
+		ret = tx_thread_create(pthr, (char *) &taskName[2 * taskIdx], (void (*)(unsigned long)) fn, arg,
+							   stk, stk_size, 0, 16, 4, TX_AUTO_START);
+
+	}
+	else
+	{
+    	ret = tx_thread_create(pthr, (char *) &taskName[2 * taskIdx], (void (*)(unsigned long)) fn, arg,
                            stk, stk_size, 16, 16, 4, TX_AUTO_START);
+	}
 #endif
 
     if (0 != ret) {

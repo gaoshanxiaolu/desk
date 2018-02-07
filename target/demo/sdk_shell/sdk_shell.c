@@ -110,22 +110,22 @@ shell_host_entry(ULONG which_thread)
     #if defined(AR6002_REV74)
     qcom_wps_register_event_handler(qcom_wps_event_process_cb, NULL);
     #endif
-		//ioe_wifi_config_get();
-		//ad_key_app();
+		ioe_wifi_config_get();
+		ad_key_app();
 					//conwifi(1,NULL);
 #if defined(BLE_UART)
-		//start_smart_chair_socket_tx_app(1,NULL);
-		//start_smart_chair_gw_uart_app(1,NULL);
+		start_smart_chair_socket_tx_app(1,NULL);
+		start_smart_chair_gw_uart_app(1,NULL);
 		start_desk_motor_app(1,NULL);
 		start_desk_uart_app(1,NULL);
         start_desk_MorX_signel_app(1,NULL);
         start_desk_led_disp_app(1,NULL);
-        //start_desk_socket_app(1,NULL);
+        start_desk_socket_app(1,NULL);
 					//start_desk_light_and_inir_app(1,NULL);
-		//start_dht12_app(1,NULL);
+		start_dht12_app(1,NULL);
 		start_watch_dog_task(1,NULL);
-		//start_upgrade_task(1,NULL);
-		//start_upgrade_ble_task(1,NULL);
+		start_upgrade_task(1,NULL);
+		start_upgrade_ble_task(1,NULL);
 		printf(">>>>>>>>desk version v%d.%d<<<<<<<<<<<<\r\n",SMART_DESK_MAIN_V,SMART_DESK_SECOND_V);
 #endif
 
