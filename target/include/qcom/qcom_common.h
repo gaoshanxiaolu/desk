@@ -38,7 +38,7 @@
 #define AP_DEFAULT_CHANNEL      2412
 
 #define SMART_DESK_MAIN_V 2
-#define SMART_DESK_SECOND_V 7
+#define SMART_DESK_SECOND_V 8
 #define HEHEDNS "dev.hehedesk.com"
 
 #define BLE_NODE_MAIN_V 1

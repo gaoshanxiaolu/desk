@@ -302,6 +302,7 @@ void print_debug(A_UINT8 *data, A_UINT16 len)
  int second_ver;
  int recv_crc32_std_value;
 extern int upgrade_status;
+extern int need_move_desk;
 int parse_rx_data(A_UINT8 *data, A_UINT16 len )
 {
 	int tmp_m,tmp_s;
@@ -450,6 +451,18 @@ int parse_rx_data(A_UINT8 *data, A_UINT16 len )
 		return 0;
 
 	}
+	else if(cmd == 0x38)
+	{
+		desk_ack_rx_msg[7] = 0xb8;
+		is_need_ack = TRUE;
+		if(get_desk_run_state() != STOP)
+		{
+			printf("isruning, cancel setdown timeout\r\n");
+			return 1;
+		}
+		need_move_desk = 1;
+		printf("setdown timeout\r\n");
+	}
 
 	else if(cmd == 0xb1)
 	{
@@ -467,7 +480,7 @@ int parse_rx_data(A_UINT8 *data, A_UINT16 len )
 		tmp_s = data[15];
 		tmp32 = data[16] << 24 | data[17] << 16 | data[18] << 8 | data[19];
 		printf("*********v%d.%d,%8x\n",tmp_m,tmp_s,tmp32);
-		if(tmp_m != SMART_DESK_MAIN_V || tmp_s != SMART_DESK_SECOND_V)
+		if(tmp_m > SMART_DESK_MAIN_V || tmp_s > SMART_DESK_SECOND_V)
 		{
 			if(upgrade_status != 1)
 			{
@@ -728,14 +741,23 @@ void desk_recv_socket_thread()
                     }
 				}
 			}
-            else
+            else if (receive_len < 0)
             {
-                printf("qcom_recv recv timeout\r\n");
+                printf("desk_recv_socket_thread: qcom_recv recv error\r\n");
 				qcom_socket_close(socketLocal);
 				conn_serv_ok = 0;
 				continue;
 
             }
+			else
+			{
+				static int rx_cnt = 0;
+				if(rx_cnt++ > 10)
+				{
+					rx_cnt = 0;
+					printf("desk socket read timeout\r\n");
+				}
+			}
 		}
 		
 	}

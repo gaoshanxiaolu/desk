@@ -696,14 +696,14 @@ int pose_judeg(void)
 }
 A_INT8 pose_need_send_cnt=0;
 A_INT8 pose_send_cnt=0;
-static qcom_timer_t nobody_timeout;
+//static qcom_timer_t nobody_timeout;
 A_INT8 body_flag = 0;
 
 void add_have_body(void)
 {
 	if(!body_flag)
 	{
-		qcom_timer_start(&nobody_timeout);
+		//qcom_timer_start(&nobody_timeout);
 		body_flag = 1;
 	}
 	
@@ -713,7 +713,7 @@ void remove_body(void)
 {
 	if(body_flag)
 	{
-		qcom_timer_stop(&nobody_timeout);
+		//qcom_timer_stop(&nobody_timeout);
 		
 		body_flag = 0;
 	}
@@ -1398,7 +1398,7 @@ void   smart_chair_gateway_uart_read_task()
 
    printf("\r\nenter chair uart data thread \r\n");
 
-   qcom_timer_init(&nobody_timeout,nobody_timeout_callback,NULL,1000*60,ONESHOT);
+   //qcom_timer_init(&nobody_timeout,nobody_timeout_callback,NULL,1000*60,ONESHOT);
 
    uart_fd_lock = 0;
 
@@ -1554,7 +1554,7 @@ void add_pose(A_UINT8 pose)
 {
 	socket_chair_tx_buffer[sizeof(socket_chair_tx_buffer)-6] = pose;
 }
-
+#if 1
 void socket_send_schair_data_task()
 {
 	A_INT32 socketLocal;
@@ -1582,6 +1582,13 @@ void socket_send_schair_data_task()
 	{
 		if(get_dev_type() != C_GW)
 		{
+			static int dev_cnt = 0;
+			if(dev_cnt++ > 10)
+			{
+				dev_cnt = 0;
+				printf("dev_cnt error \r\n");
+			}
+
 			qcom_thread_msleep(1000);
 			continue;
 		}
@@ -1626,28 +1633,47 @@ void socket_send_schair_data_task()
 			qcom_thread_msleep(500);
 			continue;
 		}*/
+			static int no_node = 0;
+		static int no_node_data = 0;
 
 		if(node_cnt == 0)
 		{
+			
+			if(no_node++ > 10)
+			{
+				no_node = 0;
+				printf("no node \r\n");
+			}
 			qcom_thread_msleep(500);
 			continue;
 		}
+		no_node=0;
 
 		if(nodes_info[send_node_cnt].data_valid)
 		{
+			nodes_info[send_node_cnt].data_valid = FALSE;
 			add_chair_id(nodes_info[send_node_cnt].ids);
 			add_pose(nodes_info[send_node_cnt].pose);
 			add_vol(nodes_info[send_node_cnt].vol_per);
 		}
 		else
 		{
+			
+			if(no_node_data++ > 10)
+			{
+				no_node_data = 0;
+				printf("no node data\r\n");
+			}
+
 			goto next_node;
 		}
+		no_node_data =0;
 
 		socketLocal = swat_socket(AF_INET, SOCK_STREAM, 0);
 		if(socketLocal == A_ERROR)
 		{
 			printf("thread create socket failed\r\n");
+			qcom_thread_msleep(500);
 			continue;
 		}
 
@@ -1694,7 +1720,190 @@ next_node:
 	qcom_task_exit();
 	
 }
+#else
 
+void socket_send_schair_data_task()
+{
+	A_INT32 socketLocal;
+	struct sockaddr_in remoteAddr;
+	int ret;
+    uint32_t ip1;
+    uint32_t mask;
+    uint32_t gateway;
+	A_UINT32 s_addr;
+	A_UINT8 dhcp_ok = FALSE;
+	A_UINT8 get_ip_ok= FALSE;
+	A_CHAR *dns = "wx.hehedesk.com";
+	uint8 send_node_cnt;
+	int not_connected;
+
+	swat_mem_set(&remoteAddr, 0, sizeof (struct sockaddr_in));
+	remoteAddr.sin_port = htons(3338);
+	remoteAddr.sin_family = AF_INET;
+	socketLocal = 0;
+	s_addr = 0;
+	send_node_cnt = 0;
+	not_connected = 0;
+
+	printf("\n enter smart chair send thread\r\n");
+	
+	while(1)
+	{
+		if(get_dev_type() != C_GW)
+		{
+			static int dev_cnt = 0;
+			if(dev_cnt++ > 10)
+			{
+				dev_cnt = 0;
+				printf("dev_cnt error \r\n");
+			}
+
+			qcom_thread_msleep(1000);
+			continue;
+		}
+		
+		if(!dhcp_ok)//check router malloc ip addr to wifi module
+		{
+			ret = qcom_ip_address_get(0, &ip1, &mask, &gateway);
+			if(ret != A_OK || ip1 == 0 || mask == 0 || gateway == 0)
+			{
+				qcom_thread_msleep(500);
+				continue;
+			}
+			dhcp_ok = TRUE;
+		}
+		
+		if(!get_ip_ok) //use dns to get ip
+		{
+			ret = qcom_dnsc_get_host_by_name(dns,&s_addr);
+			if(ret == A_OK && s_addr > 0)
+			{
+				get_ip_ok = TRUE;
+				remoteAddr.sin_addr.s_addr = htonl(s_addr);
+				printf("Get IP address of host %s\r\n", dns);
+				printf("ip address is %s\r\n", (char *)_inet_ntoa(s_addr));
+
+			}
+			else
+			{
+				qcom_thread_msleep(500);
+				continue;
+			}
+		}
+		
+		/*if(!get_recv_id)
+		{
+			qcom_thread_msleep(500);
+			continue;
+		}*/
+
+		/*if(pose_need_send_cnt == pose_send_cnt)
+		{
+			qcom_thread_msleep(500);
+			continue;
+		}*/
+			static int no_node = 0;
+		static int no_node_data = 0;
+
+		if(node_cnt == 0)
+		{
+			
+			if(no_node++ > 10)
+			{
+				no_node = 0;
+				printf("no node \r\n");
+			}
+			qcom_thread_msleep(500);
+			continue;
+		}
+		no_node=0;
+
+		if(nodes_info[send_node_cnt].data_valid)
+		{
+			nodes_info[send_node_cnt].data_valid = FALSE;
+			add_chair_id(nodes_info[send_node_cnt].ids);
+			add_pose(nodes_info[send_node_cnt].pose);
+			add_vol(nodes_info[send_node_cnt].vol_per);
+		}
+		else
+		{
+			
+			if(no_node_data++ > 10)
+			{
+				no_node_data = 0;
+				printf("no node data\r\n");
+			}
+
+			goto next_node;
+		}
+		no_node_data =0;
+
+		if(!not_connected)
+		{
+			socketLocal = swat_socket(AF_INET, SOCK_STREAM, 0);
+			if(socketLocal == A_ERROR)
+			{
+				printf("thread create socket failed\r\n");
+				qcom_thread_msleep(500);
+				continue;
+			}
+
+			ret = swat_connect(socketLocal, (struct sockaddr *) &remoteAddr,
+							 sizeof (struct  sockaddr_in));
+			
+			if (ret < 0) 
+			{
+				/* Close Socket */
+				printf("chair Connect Failed\r\n");
+				qcom_socket_close(socketLocal);
+				qcom_thread_msleep(1000);
+				continue;
+			}
+
+			not_connected = 1;
+		}
+		
+		/*static A_CHAR pose=0;
+		add_pose(pose);
+		pose++;
+		if(pose > 6)
+			pose = 0;*/
+		if(not_connected)
+		{
+			A_INT32 send_len = qcom_send(socketLocal, socket_chair_tx_buffer, sizeof(socket_chair_tx_buffer), 0);
+			if(send_len != sizeof(socket_chair_tx_buffer))
+			{
+				printf("chair send error %d\r\n",send_len);
+			}
+			else if(send_len < 0)
+			{
+				qcom_socket_close(socketLocal);
+				qcom_thread_msleep(100);
+
+			}
+			//printf("chair data:");
+			//print_debug((uint8*)socket_chair_tx_buffer, sizeof(socket_chair_tx_buffer));
+			
+			//qcom_socket_close(socketLocal);
+		}
+
+next_node:
+		//pose_send_cnt++;
+		send_node_cnt++;
+
+		if(send_node_cnt >= node_cnt)
+		{
+			send_node_cnt = 0;
+			qcom_thread_msleep(1000);
+		}
+		
+	}
+	
+	qcom_task_exit();
+	
+}
+
+#endif
 A_INT32 start_smart_chair_node_uart_app(A_INT32 argc, A_CHAR *argv[])
 {
 	qcom_task_start(smart_chair_node_uart_read_task, 2, 2048, 80);
