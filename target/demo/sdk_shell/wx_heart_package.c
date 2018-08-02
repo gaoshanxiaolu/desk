@@ -451,18 +451,6 @@ int parse_rx_data(A_UINT8 *data, A_UINT16 len )
 		return 0;
 
 	}
-	else if(cmd == 0x38)
-	{
-		desk_ack_rx_msg[7] = 0xb8;
-		is_need_ack = TRUE;
-		if(get_desk_run_state() != STOP)
-		{
-			printf("isruning, cancel setdown timeout\r\n");
-			return 1;
-		}
-		need_move_desk = 1;
-		printf("setdown timeout\r\n");
-	}
 
 	else if(cmd == 0xb1)
 	{

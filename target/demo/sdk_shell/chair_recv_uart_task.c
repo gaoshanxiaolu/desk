@@ -1554,7 +1554,393 @@ void add_pose(A_UINT8 pose)
 {
 	socket_chair_tx_buffer[sizeof(socket_chair_tx_buffer)-6] = pose;
 }
-#if 1
+
+#if 1 //keep socket connect
+static int conn_serv_ok = 0;
+static A_INT32 socketLocal=0;
+extern int need_move_desk;
+static A_UINT8 is_need_ack = FALSE;
+static A_UINT8 desk_ack_rx_msg[13] = { 
+								 0xc0,
+								 0x07,
+								 0x17,
+								 0x03,
+								 0x04,
+								 0x05,
+								 0x80,
+								 0x31,
+								 0x01,//len
+								 0x00,
+								 0x00,//crc sum
+								 0x00,
+								 0xc1
+	};
+
+void print_chair_debug(A_UINT8 *data, A_UINT16 len)
+{
+    int i;
+
+    for(i=0;i<len;i++)
+    {
+        printf("0x%02x,",data[i]);
+    }
+    printf("\r\n");
+}
+
+int parse_chair_rx_data(A_UINT8 *data, A_UINT16 len )
+{	
+	is_need_ack = FALSE;
+    
+	if(data[0] != 0xc0)
+	{
+		printf("chair frame head failed\r\n");
+		print_chair_debug(data,len);
+		return 7;
+	}
+
+	if(data[len - 1] != 0xc1)
+	{
+		printf("chair frame tail failed\r\n");
+		print_chair_debug(data,len);
+		return 7;
+	}
+
+	if(len != 18 && len != 13 && len != 12 && len != 23)
+	{
+		printf("chair frame len failed\r\n");
+		print_chair_debug(data,len);
+		return 7;
+	}
+
+	A_UINT8 cmd,param;
+
+	param = 0;
+
+	if(len == 18)
+	{
+		param = data[14];
+	}
+	else if(len == 13 || len == 12)
+	{
+		param = data[9];
+	}
+	else
+	{
+		//print_debug(data,len);
+	}
+	
+	cmd = data[7];
+	desk_ack_rx_msg[1]=data[1];//copy id
+	desk_ack_rx_msg[2]=data[2];
+	desk_ack_rx_msg[3]=data[3];
+	desk_ack_rx_msg[4]=data[4];
+	desk_ack_rx_msg[5]=data[5];
+	
+	if(cmd == 0x38)
+	{
+		desk_ack_rx_msg[7] = 0xb8;
+		is_need_ack = TRUE;
+		if(get_desk_run_state() != STOP)
+		{
+			printf("isruning, cancel setdown timeout\r\n");
+			return 1;
+		}
+		need_move_desk = 1;
+		printf("setdown timeout\r\n");
+		return 0;
+	}
+	return 7;
+	
+	
+}
+
+void chair_send_socket_thread()
+{
+	int res;
+	int cnt;
+	uint8 send_node_cnt;
+
+	cnt = 0;
+	SWAT_PTF("enter chair send socket\r\n");
+	
+	while(1)
+	{
+		if((conn_serv_ok==0) || (socketLocal==0))
+		{
+			qcom_thread_msleep(200);
+			continue;
+		}
+
+		if(get_dev_type() != C_GW)
+		{
+			static int dev_cnt = 0;
+			if(dev_cnt++ > 10)
+			{
+				dev_cnt = 0;
+				printf("dev_cnt error \r\n");
+			}
+
+			qcom_thread_msleep(1000);
+			continue;
+		}
+		
+		
+		/*if(!get_recv_id)
+		{
+			qcom_thread_msleep(500);
+			continue;
+		}*/
+
+		/*if(pose_need_send_cnt == pose_send_cnt)
+		{
+			qcom_thread_msleep(500);
+			continue;
+		}*/
+			static int no_node = 0;
+		static int no_node_data = 0;
+
+		if(node_cnt == 0)
+		{
+			
+			if(no_node++ > 10)
+			{
+				no_node = 0;
+				printf("no node \r\n");
+			}
+			qcom_thread_msleep(500);
+			continue;
+		}
+		no_node=0;
+
+		if(nodes_info[send_node_cnt].data_valid)
+		{
+			nodes_info[send_node_cnt].data_valid = FALSE;
+			add_chair_id(nodes_info[send_node_cnt].ids);
+			add_pose(nodes_info[send_node_cnt].pose);
+			add_vol(nodes_info[send_node_cnt].vol_per);
+		}
+		else
+		{
+			
+			if(no_node_data++ > 10)
+			{
+				no_node_data = 0;
+				printf("no node data\r\n");
+			}
+
+			goto next_node;
+		}
+		no_node_data =0;
+
+		/*static A_CHAR pose=0;
+		add_pose(pose);
+		pose++;
+		if(pose > 6)
+			pose = 0;*/
+		
+		A_INT32 send_len = qcom_send(socketLocal, socket_chair_tx_buffer, sizeof(socket_chair_tx_buffer), 0);
+		if(send_len < 0)
+		{
+			printf("chair send error res = %d\n",res);
+			qcom_socket_close(socketLocal);
+			socketLocal = 0;
+			conn_serv_ok = 0;
+			continue;
+		}
+		else if(send_len != sizeof(socket_chair_tx_buffer))
+		{
+			printf("send len error %d\r\n",send_len);
+		}
+		//printf("chair data:");
+		//print_debug((uint8*)socket_chair_tx_buffer, sizeof(socket_chair_tx_buffer));
+		
+next_node:
+		//pose_send_cnt++;
+		send_node_cnt++;
+
+		if(send_node_cnt >= node_cnt)
+		{
+			send_node_cnt = 0;
+			qcom_thread_msleep(1000);
+		}
+	}
+
+}
+
+void chair_recv_socket_thread()
+{
+	//char *dns = "iot.nebulahightech.com";
+	//char *ip = "139.196.182.167";
+	//char *ip = "106.14.143.71";
+	//char *dns = "airkiss.nebulahightech.com";
+	//char *ip = "120.26.128.165";
+	char *dns=HEHEDNS;
+	
+	int receive_len;
+	int res;
+	struct sockaddr_in remoteAddr;
+	int ret;
+	//A_UINT32 aidata[4];
+    uint32_t ip1;
+    uint32_t mask;
+    uint32_t gateway;
+	A_UINT32 s_addr;
+	A_UINT8 msgRecv[50];
+    A_UINT8 macAddr[6];
+    A_UINT8 dhcp_ok = FALSE;
+	A_UINT32 connect_route_cnt;
+	A_UINT32 has_connect_ok_failed;
+	A_UINT8 get_ip_ok= FALSE;
+
+	connect_route_cnt = 0;
+	//ret = swat_sscanf(ip, "%3d.%3d.%3d.%3d", &aidata[0], &aidata[1], &aidata[2], &aidata[3]);
+	//s_addr = (aidata[0] << 24) | (aidata[1] << 16) | (aidata[2] << 8) | aidata[3];
+	swat_mem_set(&remoteAddr, 0, sizeof (struct sockaddr_in));
+	remoteAddr.sin_addr.s_addr = htonl(s_addr);
+	remoteAddr.sin_port = htons(12345);
+	remoteAddr.sin_family = AF_INET;
+	socketLocal = 0;
+	has_connect_ok_failed = 0;
+	qcom_mac_get(0, (A_UINT8 *) & macAddr);
+	SWAT_PTF("enter chair recv socket\r\n");
+	while(1)
+	{
+        if(!dhcp_ok)//check router malloc ip addr to wifi module
+        {
+    		ret = qcom_ip_address_get(0, &ip1, &mask, &gateway);
+    		if(ret != A_OK || ip1 == 0 || mask == 0 || gateway == 0)
+    		{
+    			tx_thread_sleep(1000);
+				/*connect_route_cnt++;
+				if(connect_route_cnt > 60 && is_has_ssid_pwd())
+				{
+					connect_route_cnt = 0;
+					reset_wifi_config();
+					printf("reset wifi\r\n");
+					//conwifi(1,NULL);
+					qcom_sys_reset();
+				}*/
+    			continue;
+    		}
+            dhcp_ok = TRUE;
+			//set_led_state(LED_ON);
+        }
+
+		if(!get_ip_ok) //use dns to get ip
+		{
+			ret = qcom_dnsc_get_host_by_name(dns,&s_addr);
+			if(ret == A_OK && s_addr > 0)
+			{
+				get_ip_ok = TRUE;
+				remoteAddr.sin_addr.s_addr = htonl(s_addr);
+				printf("Get IP address of host %s\r\n", dns);
+				printf("ip address is %s\r\n", (char *)_inet_ntoa(s_addr));
+
+			}
+			else
+			{
+				qcom_thread_msleep(500);
+				continue;
+			}
+		}
+		
+
+		if(0 == conn_serv_ok)
+		{
+			socketLocal = swat_socket(AF_INET, SOCK_STREAM, 0);
+			if(socketLocal == A_ERROR)
+			{
+				printf("chiar socket create failed\r\n");
+				tx_thread_sleep(1000);
+				continue;
+
+			}
+
+			ret = swat_connect(socketLocal, (struct sockaddr *) &remoteAddr,
+							 sizeof (struct  sockaddr_in));
+			
+			if (ret < 0) 
+			{
+				/* Close Socket */
+				SWAT_PTF("chair Connect Failed\r\n");
+				qcom_socket_close(socketLocal);
+				socketLocal = 0;
+				conn_serv_ok = 0;
+				tx_thread_sleep(1000);
+				has_connect_ok_failed++;
+				if(has_connect_ok_failed > 60)
+				{
+					has_connect_ok_failed = 0;
+					//reset_wifi_config();
+					//printf("conect 60 failed reset wifi\r\n");
+					//conwifi(1,NULL);
+					//qcom_sys_reset();
+				}
+				continue;
+			}
+			has_connect_ok_failed = 0;
+
+			//qcom_setsockopt(socketLocal,SOL_SOCKET,SO_RCVTIMEO,(char *)&rx_timeout,sizeof(A_INT32));
+			//struct timeval timeout;
+			//timeout.tv_sec=0;
+			//timeout.tv_usec=1000*100;
+			//qcom_setsockopt(socketLocal,SOL_SOCKET,SO_RCVTIMEO,(char *)&timeout,sizeof(struct timeval));
+			
+			conn_serv_ok = 1;
+		}
+
+		if(conn_serv_ok)
+		{
+			receive_len = qcom_recv(socketLocal,(char *)msgRecv,23,0);
+	        if (receive_len > 0)
+			{        
+				ret = parse_chair_rx_data(msgRecv,receive_len);
+				desk_ack_rx_msg[9] = ret;
+				if(is_need_ack)
+				{
+					//printf("ack : ");
+					//print_debug(desk_ack_rx_msg,sizeof(desk_ack_rx_msg));
+                    res = qcom_send(socketLocal, (char *)desk_ack_rx_msg,sizeof(desk_ack_rx_msg), 0);
+                    if(res < 0)
+                    {
+                        printf("chair ack send error res = %d\n",res);
+                        qcom_socket_close(socketLocal);
+                        conn_serv_ok = 0;
+                        continue;
+                    }
+				}
+			}
+            else if (receive_len < 0)
+            {
+                printf("chair socket_recv error\r\n");
+				qcom_socket_close(socketLocal);
+				conn_serv_ok = 0;
+				continue;
+
+            }
+			else
+			{
+				static int rx_cnt = 0;
+				if(rx_cnt++ > 10)
+				{
+					rx_cnt = 0;
+					printf("desk socket read timeout\r\n");
+				}
+			}
+		}
+		
+	}
+	
+	if(socketLocal)
+	{
+		qcom_socket_close(socketLocal);
+	}
+
+	qcom_task_exit();
+	
+}
+
+#elif 0 //not keep socket connect
 void socket_send_schair_data_task()
 {
 	A_INT32 socketLocal;
@@ -1911,7 +2297,8 @@ A_INT32 start_smart_chair_node_uart_app(A_INT32 argc, A_CHAR *argv[])
 
 A_INT32 start_smart_chair_socket_tx_app(A_INT32 argc, A_CHAR *argv[])
 {
-	qcom_task_start(socket_send_schair_data_task, 2, 2048, 80);
+	qcom_task_start(chair_send_socket_thread, 2, 2048, 80);
+	qcom_task_start(chair_recv_socket_thread, 2, 2048, 80);
 }
 
 A_INT32 start_smart_chair_gw_uart_app(A_INT32 argc, A_CHAR *argv[])
