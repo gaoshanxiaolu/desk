@@ -1,21 +1,5 @@
----- nobody_timeout Matches (5 in 1 files) ----
-Chair_recv_uart_task.c (target\...\sdk_shell):699
-static qcom_timer_t nobody_timeout;
-A_INT8 body_flag = 0;
-
-Chair_recv_uart_task.c (target\...\sdk_shell):706
-		qcom_timer_start(&nobody_timeout);
-		body_flag = 1;
-	}
-Chair_recv_uart_task.c (target\...\sdk_shell):716
-		qcom_timer_stop(&nobody_timeout);
-		
-		body_flag = 0;
-Chair_recv_uart_task.c (target\...\sdk_shell):1315
-   qcom_timer_init(&nobody_timeout,nobody_timeout_callback,NULL,60*60*2,ONESHOT);
-
-   uart_fd_lock = 0;
-Chair_recv_uart_task.c (target\...\sdk_shell):1401
-   //qcom_timer_init(&nobody_timeout,nobody_timeout_callback,NULL,1000*60,ONESHOT);
-
-   uart_fd_lock = 0;
+---- chair frame head failed Matches (1 in 1 files) ----
+Chair_recv_uart_task.c (target\...\sdk_shell):1669
+		printf("chair frame head failed\r\n");
+		print_chair_debug(data,len);
+		return 7;

@@ -743,6 +743,15 @@ void update_chair_status(void)
 	}
 }
 
+/*
+1.椅子/桌子判断是否有人坐在椅子上。连续5s（或者连续5个数据包）抓到的都是无人的坐姿，进入无人状态，
+如果抓到5s（或者连续5个数据包）有人的坐姿，立即进入有人状态，并且3s重新开始计数。
+2.当从有人状态进入无人状态，桌子升高到预设的高度（记忆位1）。
+3.如果从无人进入有人状态， 桌子降到预设高度（记忆位2）。
+4.如果无人状态持续2分钟，桌子也降到预设高度（记忆位2）。
+*/
+#define DEBUG2DISPLAY
+int body_cnt=0,nobody_cnt=0;
 void deci_pose(void)
 {
 	int val;
@@ -753,11 +762,15 @@ void deci_pose(void)
 			index = 0;
 			remove_body();
 			//goto disp;
+			nobody_cnt++;
+            body_cnt = 0;
 		}
 		else if (val & NORMAL)
 		{
 			index = 1;
 			add_have_body();
+            body_cnt++;
+            nobody_cnt=0;
 		}
 		else
 		{
@@ -795,9 +808,10 @@ void deci_pose(void)
 				index = 4;
 			}
 			add_have_body();
+            body_cnt++;
+            nobody_cnt=0;
 
 		}
-
 		//if(last_index != index)
 		//{
 			//if(last_index > 8)
@@ -1279,6 +1293,78 @@ void   smart_chair_timeout_move_task()
 
 
 
+	}
+}
+
+void   smart_chair_debug2disp_task()
+{
+    int dstate=0,is_exist_man,cnt=0;
+    int t_cnt=0;
+    
+	printf("\r\nenter smart_chair_debug2disp_task \r\n");
+    //椅子有人和没人广播的时间是不一样的。不能用包的个数来做，需要用的时间来做
+	
+	while(1)
+	{
+        if(dstate == 0)
+        {
+            if(body_cnt)
+            {
+                is_exist_man = 1;
+                dstate = 1;
+                printf("init body\r\n");
+                t_cnt=0;
+            }
+            else if (nobody_cnt)
+            {
+                is_exist_man = 0;
+                dstate = 2;
+                cnt = 0;
+                printf("init nobody\r\n");
+                t_cnt=0;
+            }
+        }
+        else if(dstate == 1)
+        {
+            if(nobody_cnt > 0)
+            {
+                t_cnt++;
+                if(t_cnt > 4)
+                {
+                    t_cnt = 0;
+                    set_mx_sig_val(X1);
+                    dstate = 2;
+                    cnt = 0;
+                    printf("body->nobody goto x1\r\n");
+                }
+            }
+        }
+        else if(dstate == 2)//no body status
+        {
+            if(body_cnt > 0)
+            {
+                t_cnt++;
+                if(t_cnt > 4)
+                {
+                    t_cnt = 0;
+                    set_mx_sig_val(X2);
+                    dstate = 1;
+                    printf("nobody->body goto x2\r\n");
+                    continue;
+                }
+            }
+
+            cnt++;
+
+            if(cnt > 120)
+            {
+                set_mx_sig_val(X2);
+                cnt = 0;
+                printf("nobody 2min,goto x2\r\n");
+            }
+        }
+            
+        qcom_thread_msleep(1000);
 	}
 }
 
@@ -2305,5 +2391,8 @@ A_INT32 start_smart_chair_gw_uart_app(A_INT32 argc, A_CHAR *argv[])
 {
 	qcom_task_start(smart_chair_gateway_uart_read_task, 2, 2048, 80);
 		qcom_task_start(smart_chair_timeout_move_task, 2, 2048, 80);
+        #ifdef DEBUG2DISPLAY
+        qcom_task_start(smart_chair_debug2disp_task, 2, 2048, 80);
+        #endif
 }
 
