@@ -1,5 +1,5 @@
----- chair frame head failed Matches (1 in 1 files) ----
-Chair_recv_uart_task.c (target\...\sdk_shell):1669
-		printf("chair frame head failed\r\n");
-		print_chair_debug(data,len);
-		return 7;
+---- query timeout Matches (1 in 1 files) ----
+Upgrade_task.c (target\demo\sdk_shell):317
+					printf("query timeout, undef dev type\n\r");
+				}
+				else if(get_config_dev_type() == C_NODE)

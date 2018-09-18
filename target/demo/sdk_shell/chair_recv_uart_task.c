@@ -750,7 +750,7 @@ void update_chair_status(void)
 3.如果从无人进入有人状态， 桌子降到预设高度（记忆位2）。
 4.如果无人状态持续2分钟，桌子也降到预设高度（记忆位2）。
 */
-#define DEBUG2DISPLAY
+//#define DEBUG2DISPLAY
 int body_cnt=0,nobody_cnt=0;
 void deci_pose(void)
 {
@@ -1077,19 +1077,55 @@ void parse_gw_uart_frame(void)
 	}
 }
 #else
-void parse_gw_uart_frame(void)
+int parse_gw_uart_frame(void)
 {
 
 	uint16 i;
+	uint8 id[5];
+	uint8 vol = buf_frame[13];
+    uint8 body_flag = buf_frame[14];
+	uint8 seq = buf_frame[15];
+
+    printf("--->%x %x %x\r\n",vol,body_flag,seq);
+    if((vol & 0x80) == 0x80)//magic device
+    {
+        if(seq)//control mode
+        {
+            if(body_flag == 1)
+            {
+                if(get_desk_run_state()!= DOWN_DESK)
+                {
+                    down_desk();
+                    printf("magic down desk");
+                }
+            }
+            else if(body_flag == 2)
+            {
+                if(get_desk_run_state() != UP_DESK)
+                {
+                    up_desk();
+                    printf("magic up desk");
+                }
+
+            }
+            else
+            {
+                if(get_desk_run_state() != STOP)
+                {
+                    stop_desk();
+                    printf("magic stop desk");
+                }
+
+            }
+            
+        }
+        return 1;
+    }
 	for(i=0;i<6;i++)
 		key_frame[i] = buf_frame[i+7];
-	
-	uint8 id[5];
+
 	for(i=0;i<5;i++)
 		id[i] = buf_frame[i+2];
-
-	uint8 vol = buf_frame[13];
-	uint8 seq = buf_frame[15];
 
 	printf("id=%02x%02x%02x%02x%02x,keys=%2x%2x%2x%2x%2x%2x,vol=%2x,seq=%d\n",id[0],id[1],id[2],id[3],id[4],key_frame[0],key_frame[1],key_frame[2],key_frame[3],key_frame[4],key_frame[5],vol,seq);
 	//add_chair_id(key_frame);
@@ -1101,6 +1137,8 @@ void parse_gw_uart_frame(void)
 	{
 		upgrade_node(cur_pos,vol);
 	}
+
+    return 0;
 }
 
 #endif
@@ -1525,7 +1563,10 @@ void   smart_chair_gateway_uart_read_task()
 
 				if(get_key_frame)
 				{
-					parse_gw_uart_frame();
+					if(parse_gw_uart_frame())
+					{
+                        continue;
+					}
 					
 					//if(get_key_frame)
 					//{

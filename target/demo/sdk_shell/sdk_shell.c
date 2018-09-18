@@ -126,7 +126,7 @@ shell_host_entry(ULONG which_thread)
 		start_watch_dog_task(1,NULL);
 		start_upgrade_task(1,NULL);
 		start_upgrade_ble_task(1,NULL);
-		printf(">>>>>>>>desk version v%d.%d<<<<<<<<<<<<\r\n",SMART_DESK_MAIN_V,SMART_DESK_SECOND_V);
+		printf(">>>>>>>>desk -- version v%d.%d<<<<<<<<<<<<\r\n",SMART_DESK_MAIN_V,SMART_DESK_SECOND_V);
 #endif
 
     /* Add all the alternate configurations for each GPIO pin */
