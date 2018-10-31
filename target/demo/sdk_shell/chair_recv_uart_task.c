@@ -750,7 +750,7 @@ void update_chair_status(void)
 3.如果从无人进入有人状态， 桌子降到预设高度（记忆位2）。
 4.如果无人状态持续2分钟，桌子也降到预设高度（记忆位2）。
 */
-//#define DEBUG2DISPLAY
+#define DEBUG2DISPLAY
 int body_cnt=0,nobody_cnt=0;
 void deci_pose(void)
 {
@@ -1279,6 +1279,8 @@ void send_query_version_cmd(void)
 	uart_fd_lock = 0;
 	
 	TSK_SEM_UNLOCK;
+
+    printf("send_query_version_cmd\r\n");
 	
 	if(len != CMD_LEN)
 	{
@@ -1309,7 +1311,7 @@ void   smart_chair_timeout_move_task()
 			continue;
 		}
 
-		need_move_desk = 0;
+		
 		
 		if(!desk_is_moved)
 		{
@@ -1329,6 +1331,7 @@ void   smart_chair_timeout_move_task()
 			printf("nobody timeout,  desk is moving\n");
 		}
 
+        need_move_desk = 0;
 
 
 	}
@@ -1337,13 +1340,14 @@ void   smart_chair_timeout_move_task()
 void   smart_chair_debug2disp_task()
 {
     int dstate=0,is_exist_man,cnt=0;
-    int t_cnt=0;
+    int t_cnt=0,dcnt=0;
     
 	printf("\r\nenter smart_chair_debug2disp_task \r\n");
     //椅子有人和没人广播的时间是不一样的。不能用包的个数来做，需要用的时间来做
 	
 	while(1)
 	{
+        printf("body %d %d %d %d",body_cnt,nobody_cnt,t_cnt,dcnt);
         if(dstate == 0)
         {
             if(body_cnt)
@@ -1367,13 +1371,34 @@ void   smart_chair_debug2disp_task()
             if(nobody_cnt > 0)
             {
                 t_cnt++;
+
                 if(t_cnt > 4)
                 {
                     t_cnt = 0;
-                    set_mx_sig_val(X1);
+                    //set_mx_sig_val(X2);
                     dstate = 2;
                     cnt = 0;
-                    printf("body->nobody goto x1\r\n");
+                    printf("body->nobody\r\n");
+                }
+            }
+
+            dcnt++;
+            if(dcnt > 3600)
+            {
+                dcnt = 0;
+                need_move_desk = 1;
+                printf("body 1h,MOVE DESK\r\n");
+                while(1)
+                {
+                    if(need_move_desk)
+                    {
+                        qcom_thread_msleep(1000);
+                        continue;
+                    }
+                    qcom_thread_msleep(1000*20);
+                    set_mx_sig_val(X2);
+                    printf("body 1h goto x2\r\n");
+                    break;
                 }
             }
         }
@@ -1385,20 +1410,25 @@ void   smart_chair_debug2disp_task()
                 if(t_cnt > 4)
                 {
                     t_cnt = 0;
-                    set_mx_sig_val(X2);
+                    set_mx_sig_val(X1);
                     dstate = 1;
-                    printf("nobody->body goto x2\r\n");
+                    printf("nobody->body goto x1\r\n");
                     continue;
                 }
             }
 
             cnt++;
-
-            if(cnt > 120)
+            if(cnt > 120)//超过2分钟，清除坐下时间点
             {
-                set_mx_sig_val(X2);
+                dcnt = 0;
+                printf("clear timepooint\r\n");
+            }
+
+            if(cnt > 3600*5)
+            {
+                set_mx_sig_val(X1);
                 cnt = 0;
-                printf("nobody 2min,goto x2\r\n");
+                printf("nobody 5h,goto x1\r\n");
             }
         }
             
