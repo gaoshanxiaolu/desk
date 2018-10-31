@@ -750,7 +750,7 @@ void update_chair_status(void)
 3.如果从无人进入有人状态， 桌子降到预设高度（记忆位2）。
 4.如果无人状态持续2分钟，桌子也降到预设高度（记忆位2）。
 */
-#define DEBUG2DISPLAY
+//#define DEBUG2DISPLAY
 int body_cnt=0,nobody_cnt=0;
 void deci_pose(void)
 {
